@@ -55,6 +55,11 @@ class SeparationStorageError(SeparationError):
     code = "storage_error"
     user_message = "No hay espacio o permisos suficientes para guardar los resultados."
 
+    def __init__(self, user_message: str | None = None) -> None:
+        if user_message is not None:
+            self.user_message = user_message
+        super().__init__(self.user_message)
+
 
 class PartialSeparationError(SeparationError):
     code = "second_stage_failed"

@@ -68,7 +68,8 @@ class SeparateVocals:
             stage_two_dir.mkdir()
             publish_dir.mkdir()
         except OSError as error:
-            raise SeparationStorageError() from error
+            logger.exception("Could not create separation directories in %s", session_dir)
+            raise SeparationStorageError(self._storage_message(error, session_dir)) from error
 
         progress(SeparationStage.PREPARING, 8, "Preparando separación…")
         cancellation.raise_if_cancelled()
@@ -161,7 +162,8 @@ class SeparateVocals:
             raise
         except OSError as error:
             shutil.rmtree(job_dir, ignore_errors=True)
-            raise SeparationStorageError() from error
+            logger.exception("Storage operation failed in session %s", session_dir)
+            raise SeparationStorageError(self._storage_message(error, session_dir)) from error
         except Exception as error:
             shutil.rmtree(job_dir, ignore_errors=True)
             logger.exception("Unexpected failure in vocal separation")
@@ -177,11 +179,30 @@ class SeparateVocals:
         try:
             available = shutil.disk_usage(session.directory).free
         except OSError as error:
-            raise SeparationStorageError() from error
-        if available < estimated_bytes:
+            logger.exception("Could not check free disk space for %s", session.directory)
             raise SeparationStorageError(
-                f"Se requieren aproximadamente {estimated_bytes // (1024 * 1024)} MB libres"
+                SeparateVocals._storage_message(error, session.directory)
+            ) from error
+        if available < estimated_bytes:
+            available_mb = available // (1024 * 1024)
+            required_mb = (estimated_bytes + 1024 * 1024 - 1) // (1024 * 1024)
+            raise SeparationStorageError(
+                "No hay espacio libre suficiente en la unidad donde se guardan los proyectos. "
+                f"La separación necesita aproximadamente {required_mb} MB y hay {available_mb} MB. "
+                "Libera espacio o cambia la carpeta desde Archivo > Carpeta de proyectos…"
             )
+
+    @staticmethod
+    def _storage_message(error: OSError, fallback_path: Path) -> str:
+        failed_path = getattr(error, "filename", None) or fallback_path
+        reason = getattr(error, "strerror", None) or str(error) or "error de Windows"
+        winerror = getattr(error, "winerror", None)
+        code = f" (código {winerror})" if winerror is not None else ""
+        return (
+            "Windows no pudo guardar los archivos de separación en "
+            f"{failed_path}. Motivo: {reason}{code}. Verifica los permisos de esa carpeta "
+            "o cámbiala desde Archivo > Carpeta de proyectos…"
+        )
 
     @staticmethod
     def _require_kinds(result: SeparationResult, expected: set[StemKind]) -> None:
