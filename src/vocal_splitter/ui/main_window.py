@@ -454,6 +454,12 @@ class MainWindow(QMainWindow):
             )
             event.ignore()
             return
+        if self.workbench is not None and self.workbench.export_running:
+            self.statusBar().showMessage(
+                "La exportación sigue en curso. Cierra la ventana cuando termine."
+            )
+            event.ignore()
+            return
         super().closeEvent(event)
 
     def _open_settings(self) -> None:
