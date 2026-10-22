@@ -1,5 +1,10 @@
 """Arranque de la aplicación de escritorio."""
 
+from vocal_splitter.infrastructure.standard_streams import ensure_standard_streams
+
+# Must precede imports that can capture stdout/stderr, including Qt and inference.
+ensure_standard_streams()
+
 import logging
 import sys
 import tempfile

@@ -37,7 +37,10 @@ a = Analysis(
     hiddenimports=hiddenimports,
     hookspath=[],
     hooksconfig={},
-    runtime_hooks=[str(project_root / "packaging" / "pyi_rth_qt_dll_path.py")],
+    runtime_hooks=[
+        str(project_root / "packaging" / "pyi_rth_standard_streams.py"),
+        str(project_root / "packaging" / "pyi_rth_qt_dll_path.py"),
+    ],
     excludes=["pytest", "IPython", "notebook"],
     noarchive=False,
 )
