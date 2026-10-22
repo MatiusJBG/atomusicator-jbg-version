@@ -22,7 +22,7 @@ Esta versión ofrece voz principal, coros/residuo vocal y acompañamiento. No ge
 
 ## Instalación para uso
 
-Descarga [Separador Vocal 0.3.3](https://github.com/MatiusJBG/atomusicator-jbg-version/releases/latest) desde **Releases**. El instalador usa **Archivos de programa** (no la raíz de `C:\`) y solicita los permisos de Windows necesarios. Los modelos, proyectos y stems se guardan localmente en `%LOCALAPPDATA%\Separador Vocal\Separador Vocal`; el audio fuente permanece en su ubicación original. El instalador no incluye modelos ni audio del usuario.
+Descarga [Separador Vocal 0.3.4](https://github.com/MatiusJBG/atomusicator-jbg-version/releases/latest) desde **Releases**. El instalador usa **Archivos de programa** (no la raíz de `C:\`) y solicita los permisos de Windows necesarios. Los modelos, proyectos y stems se guardan localmente en `%LOCALAPPDATA%\Separador Vocal\Separador Vocal`; el audio fuente permanece en su ubicación original. El instalador no incluye modelos ni audio del usuario.
 
 Requisitos:
 
@@ -94,7 +94,7 @@ python -m unittest discover -s tests -v
 ./packaging/build_windows.ps1
 ```
 
-El script de empaquetado corre primero las pruebas de rutas/permisos, compila el instalador y ejecuta `packaging/smoke_test_windows.ps1`. El smoke test arranca `SeparadorVocal.exe --diagnostics` (comprueba Qt, FFmpeg, la ruta de datos local y una escritura real), y luego inicia la ventana gráfica para confirmar que no se cierra al arrancar.
+El script de empaquetado corre primero las pruebas de rutas/permisos y del operador nativo TorchVision, compila el instalador y ejecuta `packaging/smoke_test_windows.ps1`. El smoke test ejecuta `SeparadorVocal.exe --diagnostics` (FFmpeg, escritura local y operador `nms`), prueba las dos etapas completas con modelos en caché si están disponibles y luego inicia la interfaz gráfica.
 
 El script crea el ejecutable y el instalador en `dist/`. Los artefactos se publican como adjuntos de una Release; no se suben al historial Git.
 
