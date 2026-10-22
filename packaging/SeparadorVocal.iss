@@ -1,5 +1,5 @@
 #define AppName "Separador Vocal"
-#define AppVersion "0.3.2"
+#define AppVersion "0.3.3"
 #define AppPublisher "Atomusicator JBG"
 
 [Setup]
@@ -36,3 +36,38 @@ Name: "{autodesktop}\Separador Vocal"; Filename: "{app}\SeparadorVocal.exe"; Tas
 
 [Run]
 Filename: "{app}\SeparadorVocal.exe"; Description: "Iniciar Separador Vocal"; Flags: postinstall nowait skipifsilent
+
+[Code]
+function IsDriveRoot(Directory: String): Boolean;
+var
+  NormalizedDirectory: String;
+begin
+  NormalizedDirectory := RemoveBackslashUnlessRoot(ExpandFileName(Directory));
+  Result := CompareText(NormalizedDirectory, ExtractFileDrive(NormalizedDirectory) + '\') = 0;
+end;
+
+function InitializeSetup(): Boolean;
+var
+  RequestedDirectory: String;
+begin
+  Result := True;
+  RequestedDirectory := ExpandConstant('{param:DIR|}');
+  if (RequestedDirectory <> '') and IsDriveRoot(RequestedDirectory) then
+  begin
+    MsgBox('No se puede instalar en la raíz de una unidad. Elige una subcarpeta, por ejemplo Archivos de programa.', mbError, MB_OK);
+    Result := False;
+  end;
+end;
+
+function NextButtonClick(CurPageID: Integer): Boolean;
+begin
+  Result := True;
+  if CurPageID = wpSelectDir then
+  begin
+    if IsDriveRoot(WizardDirValue) then
+    begin
+      MsgBox('Instala Separador Vocal en una subcarpeta, no en la raíz de la unidad. El destino predeterminado es Archivos de programa y requiere permisos de administrador.', mbError, MB_OK);
+      Result := False;
+    end;
+  end;
+end;

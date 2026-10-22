@@ -10,6 +10,10 @@ if (-not (Test-Path $python)) {
 & $python -m pip install --upgrade pip
 & $python -m pip install -e ".[desktop,separation-cpu]"
 if ($LASTEXITCODE -ne 0) { throw "No se pudieron instalar las dependencias de empaquetado." }
+& $python -m unittest discover -s tests -v
+if ($LASTEXITCODE -ne 0) { throw "Fallaron las pruebas de escritorio/rutas locales." }
+& $python -m compileall -q src
+if ($LASTEXITCODE -ne 0) { throw "Falló la compilación de los módulos de Python." }
 
 # Do not let bundled workspace runtimes on PATH become accidental PyInstaller
 # dependencies. Those DLLs belong to the build host and can shadow Qt DLLs.
@@ -42,3 +46,5 @@ if (-not $iscc) {
 & $iscc "packaging\SeparadorVocal.iss"
 if ($LASTEXITCODE -ne 0) { throw "Falló la compilación del instalador Inno Setup." }
 Write-Host "Instalador generado en dist\SeparadorVocal-Setup.exe"
+& (Join-Path $PSScriptRoot "smoke_test_windows.ps1")
+if ($LASTEXITCODE -ne 0) { throw "Falló la prueba de escritorio del ejecutable empaquetado." }
