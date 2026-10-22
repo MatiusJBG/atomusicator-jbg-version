@@ -17,6 +17,7 @@ class MixerTrack:
     gain: float = 1.0
     muted: bool = False
     solo: bool = False
+    pan: float = 0.0
 
 
 class RealtimeMixer:
@@ -37,6 +38,9 @@ class RealtimeMixer:
         self._lock = threading.Lock()
         self._scratch = np.zeros((8192, self.channels), dtype=np.float32)
         self._stream = None
+        self.master_gain = 1.0
+        self._track_levels = [0.0] * len(tracks)
+        self._master_levels = (0.0, 0.0)
 
     @classmethod
     def from_files(cls, paths: list[tuple[str, Path]]) -> "RealtimeMixer":
@@ -54,7 +58,8 @@ class RealtimeMixer:
         return cls(tracks, rate)
 
     def set_controls(self, index: int, *, gain: float | None = None,
-                     muted: bool | None = None, solo: bool | None = None) -> None:
+                     muted: bool | None = None, solo: bool | None = None,
+                     pan: float | None = None) -> None:
         with self._lock:
             track = self.tracks[index]
             if gain is not None:
@@ -63,6 +68,16 @@ class RealtimeMixer:
                 track.muted = muted
             if solo is not None:
                 track.solo = solo
+            if pan is not None:
+                track.pan = max(-1.0, min(1.0, float(pan)))
+
+    def set_master_gain(self, gain: float) -> None:
+        with self._lock:
+            self.master_gain = max(0.0, min(1.5, float(gain)))
+
+    def meter_levels(self) -> tuple[tuple[float, ...], tuple[float, float]]:
+        with self._lock:
+            return tuple(self._track_levels), self._master_levels
 
     def seek(self, frame: int) -> None:
         with self._lock:
@@ -102,16 +117,25 @@ class RealtimeMixer:
             if count <= 0:
                 raise __import__("sounddevice").CallbackStop
             solo_active = any(track.solo for track in self.tracks)
-            for track in self.tracks:
+            for index, track in enumerate(self.tracks):
+                self._track_levels[index] = 0.0
                 if track.muted or (solo_active and not track.solo):
                     continue
                 scratch = self._scratch[:count]
                 np.multiply(track.samples[start:end], track.gain, out=scratch)
+                if self.channels >= 2:
+                    scratch[:, 0] *= min(1.0, 1.0 - track.pan)
+                    scratch[:, 1] *= min(1.0, 1.0 + track.pan)
+                self._track_levels[index] = float(np.max(np.abs(scratch)))
                 np.add(outdata[:count], scratch, out=outdata[:count])
+            outdata[:count] *= self.master_gain
             # Guardamos margen de pico antes de entregar el bloque al dispositivo.
             peak = float(np.max(np.abs(outdata[:count])))
             if peak > 0.98:
                 outdata[:count] *= 0.98 / peak
+            left = float(np.max(np.abs(outdata[:count, 0])))
+            right = float(np.max(np.abs(outdata[:count, min(1, self.channels - 1)])))
+            self._master_levels = (left, right)
             self.position = end
         if count < frames:
             outdata[count:].fill(0)
