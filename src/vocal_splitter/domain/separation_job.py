@@ -8,6 +8,8 @@ class SeparationStage(StrEnum):
     PREPARING = "preparing"
     VOICE_AND_INSTRUMENTAL = "voice_and_instrumental"
     LEAD_AND_BACKING = "lead_and_backing"
+    DRUMS_AND_REMAINDER = "drums_and_remainder"
+    BASS_AND_INSTRUMENTAL = "bass_and_instrumental"
     FINALIZING = "finalizing"
 
 

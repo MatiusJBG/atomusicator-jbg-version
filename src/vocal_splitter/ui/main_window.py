@@ -3,7 +3,16 @@
 from pathlib import Path
 
 from PySide6.QtCore import QStandardPaths, QThread, Qt, Signal
-from PySide6.QtGui import QAction, QCloseEvent, QDragEnterEvent, QDropEvent
+from PySide6.QtGui import (
+    QAction,
+    QCloseEvent,
+    QColor,
+    QDragEnterEvent,
+    QDropEvent,
+    QFont,
+    QPainter,
+    QPen,
+)
 from PySide6.QtWidgets import (
     QDialog,
     QFileDialog,
@@ -34,18 +43,34 @@ from vocal_splitter.ui.settings_dialog import SettingsDialog
 from vocal_splitter.ui.separation_worker import SeparationWorker
 
 
+class WaveMark(QWidget):
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setFixedSize(64, 48)
+
+    def paintEvent(self, _event) -> None:
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setPen(QPen(Qt.PenStyle.NoPen))
+        painter.setBrush(QColor("#55cfc0"))
+        heights = (10, 17, 26, 36, 23, 15, 30, 20, 12)
+        middle = self.height() / 2
+        for index, height in enumerate(heights):
+            x = 5 + index * 7
+            painter.drawRoundedRect(x, middle - height / 2, 3, height, 1.5, 1.5)
+
+
 class DropArea(QFrame):
     file_dropped = Signal(str)
 
     def __init__(self) -> None:
         super().__init__()
+        self.setFont(QFont("Segoe UI", 10))
         self.setObjectName("dropArea")
         self.setAcceptDrops(True)
         self.setMinimumHeight(300)
 
-        wave = QLabel("∿")
-        wave.setObjectName("waveMark")
-        wave.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        wave = WaveMark()
 
         prompt = QLabel("Suelta una mezcla de audio aquí")
         prompt.setObjectName("dropPrompt")
@@ -95,8 +120,8 @@ class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle("Separador Vocal")
-        self.resize(980, 680)
-        self.setMinimumSize(720, 520)
+        self.resize(1280, 800)
+        self.setMinimumSize(940, 650)
 
         self._settings_store = SettingsStore()
         self._project_settings = self._settings_store.load()
@@ -114,32 +139,65 @@ class MainWindow(QMainWindow):
         self._build_menu()
         self._build_content()
         self.setStyleSheet(
-            "QMainWindow, QWidget#central { background: #0b1219; color: #edf3f5; }"
-            "QLabel#pageTitle { font-size: 28px; font-weight: 700; color: #edf3f5; }"
-            "QLabel#pageSubtitle { font-size: 14px; color: #a9bbc4; }"
-            "QPushButton { background: #56d6d1; color: #102128; border: 0;"
-            " border-radius: 7px; padding: 10px 18px; font-weight: 650; }"
-            "QPushButton:hover { background: #79e3de; }"
-            "QPushButton:checked { background: #ffb547; color: #19202a; }"
-            "QPushButton:disabled { background: #3b7776; color: #d7e5e5; }"
-            "QFrame#dropArea { background: #101923; border: 1px dashed #49606c;"
-            " border-radius: 10px; }"
-            "QFrame#dropArea[dragActive='true'] { border: 2px solid #56d6d1;"
-            " background: #142631; }"
-            "QFrame#separationPanel { background: #101923; border: 1px solid #29404b;"
-            " border-radius: 10px; }"
+            "QMainWindow, QWidget#central { background: #151d20; color: #f0eee6; }"
+            "QLabel#pageTitle { font-size: 27px; font-weight: 700; color: #f0eee6; }"
+            "QLabel#pageSubtitle { font-size: 14px; color: #aebcb6; }"
+            "QPushButton { background: #55cfc0; color: #122120; border: 0;"
+            " border-radius: 8px; padding: 10px 17px; font-weight: 650; }"
+            "QPushButton:hover { background: #79dfd1; }"
+            "QPushButton:checked { background: #e5b35b; color: #19201e; }"
+            "QPushButton:disabled { background: #3a6662; color: #ccd8d2; }"
+            "QFrame#dropArea { background: #202b2f; border: 1px dashed #526761;"
+            " border-radius: 12px; }"
+            "QFrame#dropArea[dragActive='true'] { border: 2px solid #55cfc0;"
+            " background: #273633; }"
+            "QFrame#separationPanel { background: #202b2f; border: 1px solid #354541;"
+            " border-radius: 12px; }"
             "QLabel#separationHeading { color: #edf3f5; font-size: 24px; font-weight: 700; }"
-            "QLabel#separationPhase { color: #56d6d1; font-size: 18px; font-weight: 650; }"
-            "QLabel#separationSteps { color: #c3d4da; font-size: 14px; }"
-            "QLabel#separationDetail { color: #a9bbc4; font-size: 14px; }"
-            "QLabel#waveMark { color: #56d6d1; font-size: 52px; font-weight: 700; }"
-            "QLabel#dropPrompt { color: #edf3f5; font-size: 19px; font-weight: 600; }"
-            "QLabel#formatList { color: #93aab5; font-size: 12px; }"
-            "QLabel#result { color: #dce8ec; font-size: 14px; }"
-            "QProgressBar { border: 0; background: #1b2a37; height: 5px; }"
-            "QProgressBar::chunk { background: #ff8b6a; }"
-            "QMenuBar { background: #0b1219; color: #dce8ec; }"
-            "QMenuBar::item:selected, QMenu::item:selected { background: #1b2a37; }"
+            "QLabel#separationPhase { color: #55cfc0; font-size: 18px; font-weight: 650; }"
+            "QLabel#separationSteps { color: #d0d8d0; font-size: 14px; }"
+            "QLabel#separationDetail { color: #aebcb6; font-size: 14px; }"
+            "QLabel#waveMark { color: #55cfc0; font-size: 52px; font-weight: 700; }"
+            "QLabel#dropPrompt { color: #f0eee6; font-size: 19px; font-weight: 600; }"
+            "QLabel#formatList { color: #aebcb6; font-size: 12px; }"
+            "QLabel#result { color: #dce4db; font-size: 13px; }"
+            "QProgressBar { border: 0; border-radius: 3px; background: #2b383b; height: 6px; }"
+            "QProgressBar::chunk { border-radius: 3px; background: #55cfc0; }"
+            "QMenuBar { background: #151d20; color: #dce4db; padding: 3px; }"
+            "QMenuBar::item:selected, QMenu::item:selected { background: #2b383b; }"
+            "QLabel#workbenchTitle { color: #f0eee6; font-size: 20px; font-weight: 700; }"
+            "QLabel#workbenchHint { color: #aebcb6; font-size: 12px; }"
+            "QLabel#stemCount { color: #55cfc0; background: #243a36; border-radius: 9px;"
+            " padding: 7px 10px; font-size: 10px; font-weight: 700; }"
+            "QFrame#trackRow { background: #202b2f; border: 1px solid #33413d; border-radius: 9px; }"
+            "QLabel#trackTitle { color: #f0eee6; font-size: 13px; font-weight: 650; }"
+            "QLabel#trackOrdinal, QLabel#controlEyebrow { color: #83958e; font-size: 9px;"
+            " font-weight: 700; letter-spacing: 1px; }"
+            "QLabel#gainValue { color: #c1ccc3; font-size: 11px; }"
+            "QFrame#transportPanel { background: #202b2f; border: 1px solid #354541; border-radius: 11px; }"
+            "QLabel#transportTime { color: #dce4db; font-family: Consolas; font-size: 13px;"
+            " font-weight: 650; min-width: 96px; }"
+            "QPushButton#playButton { background: #55cfc0; color: #122120; padding: 0;"
+            " border-radius: 21px; font-size: 16px; font-weight: 700; }"
+            "QPushButton#playButton:hover { background: #79dfd1; }"
+            "QPushButton#secondaryButton { background: #2b383b; color: #e3e7de;"
+            " border: 1px solid #465650; padding: 8px 13px; }"
+            "QPushButton#secondaryButton:hover { background: #364541; }"
+            "QPushButton#primaryButton { padding: 8px 14px; }"
+            "QPushButton#trackToggle { background: #2b383b; color: #b8c5bd;"
+            " border: 1px solid #465650; border-radius: 6px; padding: 5px; font-weight: 700; }"
+            "QPushButton#trackToggle:checked { background: #e5b35b; color: #17201d; border-color: #e5b35b; }"
+            "QSlider::groove:horizontal { background: #3a4843; height: 4px; border-radius: 2px; }"
+            "QSlider::sub-page:horizontal { background: #55cfc0; border-radius: 2px; }"
+            "QSlider::handle:horizontal { background: #f0eee6; width: 12px; margin: -5px 0; border-radius: 6px; }"
+            "QSpinBox { background: #202b2f; color: #f0eee6; border: 1px solid #465650;"
+            " border-radius: 6px; padding: 6px; }"
+            "QScrollArea#trackScroll, QWidget#trackContent { background: transparent; }"
+            "QScrollBar:vertical { width: 8px; background: #202b2f; border: 0; margin: 2px; }"
+            "QScrollBar::handle:vertical { min-height: 24px; background: #52645c; border-radius: 4px; }"
+            "QScrollBar::handle:vertical:hover { background: #71857a; }"
+            "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }"
+            "QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: transparent; }"
         )
 
     def _build_menu(self) -> None:
@@ -156,14 +214,14 @@ class MainWindow(QMainWindow):
     def _build_content(self) -> None:
         title = QLabel("Separador Vocal")
         title.setObjectName("pageTitle")
-        subtitle = QLabel("Deja la voz principal al frente. Separa los coros para mezclarlos aparte.")
+        subtitle = QLabel("Separa voz, coros, batería, bajo e instrumental; mezcla cada pista por separado.")
         subtitle.setObjectName("pageSubtitle")
 
         self.import_button = QPushButton("Importar audio")
         self.import_button.setMinimumHeight(44)
         self.import_button.clicked.connect(self._choose_file)
 
-        self.separate_button = QPushButton("Separar voz y coros")
+        self.separate_button = QPushButton("Separar 5 stems")
         self.separate_button.setMinimumHeight(44)
         self.separate_button.setEnabled(False)
         self.separate_button.clicked.connect(self._start_separation)
@@ -193,8 +251,8 @@ class MainWindow(QMainWindow):
         self.separation_phase = QLabel("Preparando modelos de audio…")
         self.separation_phase.setObjectName("separationPhase")
         self.separation_steps = QLabel(
-            "1  Voz + acompañamiento     →     2  Voz principal + coros     →     "
-            "3  Validación de pistas"
+            "1  Voz + instrumental     →     2  Voz principal + coros     →     "
+            "3  Batería     →     4  Bajo + instrumental restante"
         )
         self.separation_steps.setObjectName("separationSteps")
         self.separation_detail = QLabel("Preparando el procesamiento local.")
@@ -331,8 +389,8 @@ class MainWindow(QMainWindow):
                 answer = QMessageBox.question(
                     self,
                     "Descargar modelos de separación",
-                    "Se necesitan estos modelos UVR (descarga total aproximada: "
-                    "120 MB):\n\n"
+                    "Se necesitan los modelos locales de separación (descarga total "
+                    "aproximada: 180 MB):\n\n"
                     f"{missing}\n\n"
                     "Se guardarán en la caché local y se verificarán antes de usarlos. "
                     "¿Descargarlos ahora?",
@@ -375,7 +433,7 @@ class MainWindow(QMainWindow):
             "mientras se preparan los modelos."
         )
         self.result_label.setText(
-            "Preparando la separación local. La primera ejecución descargará los dos modelos UVR configurados."
+            "Preparando la separación local. La primera ejecución descargará los modelos de voz, batería y bajo configurados."
         )
         self.statusBar().showMessage("Preparando separación…")
         thread.start()
@@ -384,10 +442,14 @@ class MainWindow(QMainWindow):
         stage_labels = {
             SeparationStage.PREPARING.value: "Preparando modelos de separación",
             SeparationStage.VOICE_AND_INSTRUMENTAL.value:
-                "Etapa 1/2 · Separando voz y acompañamiento",
+                "Etapa 1/4 · Separando voz y acompañamiento",
             SeparationStage.LEAD_AND_BACKING.value:
-                "Etapa 2/2 · Separando voz principal y coros",
-            SeparationStage.FINALIZING.value: "Validando y guardando las tres pistas",
+                "Etapa 2/4 · Separando voz principal y coros",
+            SeparationStage.DRUMS_AND_REMAINDER.value:
+                "Etapa 3/4 · Extrayendo batería del acompañamiento",
+            SeparationStage.BASS_AND_INSTRUMENTAL.value:
+                "Etapa 4/4 · Extrayendo bajo y afinando el instrumental",
+            SeparationStage.FINALIZING.value: "Validando y guardando los cinco stems",
         }
         self.separation_phase.setText(
             stage_labels.get(stage, "Procesando audio localmente")
@@ -409,14 +471,16 @@ class MainWindow(QMainWindow):
         labels = {
             StemKind.LEAD_VOCAL: "Voz principal",
             StemKind.BACKING_VOCALS: "Coros / residuo vocal",
-            StemKind.INSTRUMENTAL: "Acompañamiento",
+            StemKind.DRUMS: "Batería",
+            StemKind.BASS: "Bajo",
+            StemKind.INSTRUMENTAL: "Instrumental",
         }
         paths = "\n".join(
             f"{labels[stem.kind]}: {stem.path}"
             for stem in result.stems
         )
         self.result_label.setText(
-            "Separación lista. La voz principal y los coros son estimaciones; "
+            "Separación lista. Voz principal y coros son estimaciones del modelo; "
             "escucha las pistas antes de usarlas.\n" + paths
         )
         self.separation_panel.hide()
@@ -474,7 +538,7 @@ class MainWindow(QMainWindow):
     def _separation_failed(self, message: str, partial_result: object) -> None:
         if isinstance(partial_result, SeparationResult):
             paths = "\n".join(str(stem.path) for stem in partial_result.stems)
-            message = f"{message}\nResultados de primera etapa:\n{paths}"
+            message = f"{message}\nPistas parciales recuperadas:\n{paths}"
         self.result_label.setText(message)
         self.separation_panel.hide()
         self.drop_area.show()

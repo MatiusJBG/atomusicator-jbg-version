@@ -2,7 +2,7 @@
 
 ## `audio-workbench`
 
-- [x] Mostrar las formas de onda de voz principal, coros y acompañamiento con cursor común.
+- [x] Mostrar las cinco formas de onda (voz principal, coros, batería, bajo e instrumental) con cursor común.
 - [x] Reproducir y pausar sincronizados; buscar al pulsar una forma de onda.
 - [x] Mute, Solo y ganancia independientes; control de pico del bus durante reproducción.
 - [x] Aplicar pitch de -12 a +12 semitonos en segundo plano con Rubber Band de FFmpeg y mantener los WAV originales.
@@ -16,11 +16,20 @@
 - [x] Detectar FFmpeg en PATH o en WinGet Links y exponerlo también al proceso del motor.
 - [ ] Validar escucha comparativa con canción con licencia permisiva; no declarar mejora auditiva hasta hacer esa escucha.
 
-## Separación de cuatro stems y exportación
+## Separación de cinco stems y exportación
 
-- [ ] Añadir voz, batería, bajo y otros cuando haya pesos con derechos revisados para el modo de distribución previsto.
+- [x] Añadir batería, bajo e instrumental restante mediante modelos MDX-Net de UVR, con descarga local y hashes verificados.
+- [x] Publicar los cinco WAV finales juntos; preservar pistas recuperables como resultado parcial si falla la separación instrumental.
+- [x] Verificar la tubería con modelos reales, alineación a 44.1 kHz y duración conservada; validar controles M/S/ganancia y presentación de las cinco pistas.
+- [ ] Evaluar la calidad auditiva con canciones de distintos estilos y voces reales; una mezcla sintetizada no valida la clasificación musical general.
 - [ ] Añadir elección de formato y exportación de mezcla.
-- [ ] Mantener el procesamiento de mezclas largas dentro de límites de memoria y verificar continuidad con audio real.
+- [x] Mantener el procesamiento segmentado con solapamiento 0.35 y comprobar bordes y duración en una pista de referencia.
+
+## Renovación visual
+
+- [x] Aplicar paleta de grafito, pizarra y menta con colores semánticos por stem.
+- [x] Compactar el mezclador para mostrar las cinco pistas juntas en 1280×800 y añadir scroll en ventanas menores.
+- [x] Actualizar el flujo de importación, progreso de cuatro etapas y transporte de pitch/exportación.
 
 ## Windows / GitHub
 

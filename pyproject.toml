@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "separador-vocal"
-version = "0.3.4"
-description = "Aplicación local para separar voz principal, coros y acompañamiento."
+version = "0.4.0"
+description = "Aplicación local para separar cinco stems y mezclar pistas de audio."
 requires-python = ">=3.11,<3.14"
 dependencies = [
     "PySide6-Essentials>=6.7,<7",

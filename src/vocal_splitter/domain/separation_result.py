@@ -31,6 +31,8 @@ class SeparationResult:
         return {
             StemKind.LEAD_VOCAL,
             StemKind.BACKING_VOCALS,
+            StemKind.DRUMS,
+            StemKind.BASS,
             StemKind.INSTRUMENTAL,
         } == {stem.kind for stem in self.stems}
 

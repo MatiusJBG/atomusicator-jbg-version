@@ -10,6 +10,8 @@ class StemKind(StrEnum):
     VOCAL_MIX = "vocal_mix"
     LEAD_VOCAL = "lead_vocal"
     BACKING_VOCALS = "backing_vocals"
+    DRUMS = "drums"
+    BASS = "bass"
     INSTRUMENTAL = "instrumental"
 
 

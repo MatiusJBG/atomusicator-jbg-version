@@ -36,3 +36,21 @@ class VocalSeparator(Protocol):
         progress: ProgressCallback,
         cancellation: CancellationToken,
     ) -> SeparationResult: ...
+
+    def separate_drums_and_residual(
+        self,
+        instrumental_stem: Stem,
+        output_dir: Path,
+        *,
+        progress: ProgressCallback,
+        cancellation: CancellationToken,
+    ) -> SeparationResult: ...
+
+    def separate_bass_and_instrumental(
+        self,
+        instrumental_stem: Stem,
+        output_dir: Path,
+        *,
+        progress: ProgressCallback,
+        cancellation: CancellationToken,
+    ) -> SeparationResult: ...

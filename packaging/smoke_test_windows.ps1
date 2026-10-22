@@ -45,7 +45,12 @@ if ($checkLine -match "WinGet[\\/]Links[\\/]ffmpeg\.exe") {
 }
 
 $modelDirectory = Join-Path $appData "models"
-$requiredModels = @("UVR_MDXNET_Main.onnx", "UVR_MDXNET_KARA_2.onnx")
+$requiredModels = @(
+    "UVR_MDXNET_Main.onnx",
+    "UVR_MDXNET_KARA_2.onnx",
+    "kuielab_a_drums.onnx",
+    "kuielab_a_bass.onnx"
+)
 $modelsAvailable = @($requiredModels | Where-Object {
     Test-Path -LiteralPath (Join-Path $modelDirectory $_) -PathType Leaf
 }).Count -eq $requiredModels.Count
@@ -53,7 +58,7 @@ if ($modelsAvailable) {
     $logBeforeSeparation = Get-Content -LiteralPath $logFile -Raw
     $separationExitCode = Invoke-DesktopExecutable "--diagnostics-separation"
     if ($separationExitCode -ne 0) {
-        throw "El flujo empaquetado de dos etapas no generó y validó los tres stems."
+        throw "El flujo empaquetado de cuatro etapas no generó y validó los cinco stems."
     }
     $log = Get-Content -LiteralPath $logFile -Raw
     $newSeparationLog = if ($log.StartsWith($logBeforeSeparation)) {
@@ -62,8 +67,8 @@ if ($modelsAvailable) {
     else {
         $log
     }
-    if ($newSeparationLog -notmatch "Separation self-test passed; stems=3; stages=2") {
-        throw "El autodiagnóstico no confirmó que se validaron tres stems en dos etapas."
+    if ($newSeparationLog -notmatch "Separation self-test passed; stems=5; stages=4") {
+        throw "El autodiagnóstico no confirmó que se validaron cinco stems en cuatro etapas."
     }
 }
 else {
@@ -86,4 +91,4 @@ if ($newGuiLog -notmatch "GUI self-test passed; window_created=true; window_show
     throw "El autodiagnóstico no confirmó que la ventana se mostrara."
 }
 
-Write-Host "Desktop smoke test passed: FFmpeg, local storage, TorchVision nms, optional two-stage inference, and Qt GUI launch."
+Write-Host "Desktop smoke test passed: FFmpeg, local storage, TorchVision nms, optional five-stem inference, and Qt GUI launch."

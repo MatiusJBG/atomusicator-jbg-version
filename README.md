@@ -1,6 +1,6 @@
 # Separador Vocal
 
-Aplicación de escritorio para Windows que crea una estimación de voz principal, coros/residuo vocal y acompañamiento a partir de una mezcla. Incluye reproducción sincronizada de stems, controles de mezcla y transposición de pitch que conserva el tempo.
+Aplicación de escritorio para Windows que estima cinco pistas locales a partir de una mezcla: voz principal, coros, batería, bajo e instrumental. Incluye reproducción sincronizada de stems, controles de mezcla y transposición de pitch que conserva el tempo.
 
 La interfaz se inspira en flujos comunes de estaciones de audio. Separador Vocal es un proyecto independiente y no usa código, marca ni servicios privados de Moises.ai. El procesamiento se ejecuta localmente.
 
@@ -9,6 +9,7 @@ La interfaz se inspira en flujos comunes de estaciones de audio. Separador Vocal
 - Importa WAV, MP3, FLAC y M4A desde el diálogo o arrastrando el archivo.
 - Conserva el audio fuente en su ubicación y crea una sesión local con resultados y metadatos.
 - Separa voz total y acompañamiento, y vuelve a procesar la voz para estimar voz principal y coros.
+- Descompone el acompañamiento en batería, bajo e instrumental restante, usando perfiles MDX-Net especializados.
 - Muestra formas de onda sincronizadas y una línea de reproducción común.
 - Reproduce y pausa las pistas, permite buscar en la canción y ajustar el volumen de cada stem.
 - Los botones **M** (Mute) y **S** (Solo) cambian la mezcla durante la reproducción.
@@ -18,11 +19,11 @@ La interfaz se inspira en flujos comunes de estaciones de audio. Separador Vocal
 
 La separación de voces es una estimación: doblajes, armonías, reverb y voces de timbre parecido pueden filtrarse entre voz principal y coros. La app no promete aislamiento perfecto.
 
-Esta versión ofrece voz principal, coros/residuo vocal y acompañamiento. No genera todavía batería, bajo y otros como stems separados: el modelo de cuatro stems seleccionado debe tener condiciones de uso de sus pesos compatibles con el instalador y la distribución del proyecto.
+Los cinco archivos WAV se publican juntos al completar las cuatro pasadas locales. Voz principal y coros son estimaciones del modelo; la batería, el bajo y el instrumental restante también pueden contener filtraciones.
 
 ## Instalación para uso
 
-Descarga [Separador Vocal 0.3.4](https://github.com/MatiusJBG/atomusicator-jbg-version/releases/latest) desde **Releases**. El instalador usa **Archivos de programa** (no la raíz de `C:\`) y solicita los permisos de Windows necesarios. Los modelos, proyectos y stems se guardan localmente en `%LOCALAPPDATA%\Separador Vocal\Separador Vocal`; el audio fuente permanece en su ubicación original. El instalador no incluye modelos ni audio del usuario.
+Descarga el instalador más reciente desde [Releases](https://github.com/MatiusJBG/atomusicator-jbg-version/releases). El instalador usa **Archivos de programa** (no la raíz de `C:\`) y solicita los permisos de Windows necesarios. Los modelos, proyectos y stems se guardan localmente en `%LOCALAPPDATA%\Separador Vocal\Separador Vocal`; el audio fuente permanece en su ubicación original. El instalador no incluye modelos ni audio del usuario.
 
 Requisitos:
 
@@ -48,7 +49,7 @@ Si PowerShell impide activar el entorno, ejecuta los comandos directamente con `
 ## Flujo de trabajo
 
 1. Pulsa **Importar audio** o arrastra un archivo a la ventana.
-2. Pulsa **Separar voz y coros**. La primera vez la app pide permiso para descargar los modelos indicados; se guardan en la caché de usuario y se valida su SHA-256.
+2. Pulsa **Separar 5 stems**. La primera vez la app pide permiso para descargar los cuatro modelos (aprox. 180 MB); se guardan en la caché del usuario y se valida su SHA-256.
 3. Cuando termina, usa **▶ Reproducir**. Las pistas comparten la misma posición; pulsa sobre cualquier forma de onda para buscar.
 4. Ajusta cada deslizador o pulsa **M** para silenciar y **S** para escuchar solo esa pista.
 5. Elige de -12 a +12 semitonos y pulsa **Aplicar pitch**. El render se hace en segundo plano, mantiene el tempo y genera archivos derivados dentro de la sesión.
@@ -94,14 +95,14 @@ python -m unittest discover -s tests -v
 ./packaging/build_windows.ps1
 ```
 
-El script de empaquetado corre primero las pruebas de rutas/permisos y del operador nativo TorchVision, compila el instalador y ejecuta `packaging/smoke_test_windows.ps1`. El smoke test ejecuta `SeparadorVocal.exe --diagnostics` (FFmpeg, escritura local y operador `nms`), prueba las dos etapas completas con modelos en caché si están disponibles y luego inicia la interfaz gráfica.
+El script de empaquetado corre primero las pruebas de rutas/permisos y del operador nativo TorchVision, compila el instalador y ejecuta `packaging/smoke_test_windows.ps1`. El smoke test ejecuta `SeparadorVocal.exe --diagnostics` (FFmpeg, escritura local y operador `nms`), prueba las cuatro etapas completas con los cuatro modelos en caché si están disponibles y luego inicia la interfaz gráfica.
 
 El script crea el ejecutable y el instalador en `dist/`. Los artefactos se publican como adjuntos de una Release; no se suben al historial Git.
 
 ## Modelos, licencias y privacidad
 
 - El código de `python-audio-separator` está publicado bajo MIT. La licencia del motor no determina por sí sola los derechos de cada peso.
-- El README de UVR solicita crédito a UVR, Anjok07 y aufr33 y pide respetar MIT para integrar sus modelos. La procedencia, catálogo y hashes de los dos perfiles se guardan en `src/vocal_splitter/infrastructure/separation/model_license_manifest.json`; no se empaquetan los pesos.
+- El README de UVR solicita crédito a UVR, Anjok07 y aufr33 y pide respetar MIT para integrar sus modelos. El catálogo oficial identifica los perfiles vocales y los perfiles Kuielab de batería/bajo. Procedencia y hashes se guardan en `src/vocal_splitter/infrastructure/separation/model_license_manifest.json`; no se empaquetan los pesos.
 - La app descarga únicamente los perfiles enumerados en su manifiesto y muestra confirmación antes de la primera descarga. Revisa `docs/third-party-notices.md` antes de distribuir una versión o usarla comercialmente.
 - Los modelos, FFmpeg y las grabaciones del usuario no forman parte del repositorio ni del instalador. Las canciones permanecen en el equipo; no hay subida a nube ni telemetría.
 - El instalador se construyó con Inno Setup. Sus autores solicitan comprar una licencia comercial si el programa se usa en contexto comercial; revisa sus [condiciones actuales](https://jrsoftware.org/isorder.php) antes de una distribución comercial.

@@ -1,5 +1,5 @@
 #define AppName "Separador Vocal"
-#define AppVersion "0.3.4"
+#define AppVersion "0.4.0"
 #define AppPublisher "Atomusicator JBG"
 
 [Setup]
