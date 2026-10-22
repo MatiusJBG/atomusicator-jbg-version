@@ -16,7 +16,11 @@ Dependencia opcional de inferencia, publicada bajo MIT por karaokenerds: [reposi
 
 ## FFmpeg
 
-FFmpeg es un requisito externo del motor y no se incluye con Separador Vocal. Cada persona instala y usa una compilación independiente, cuyos términos dependen de las opciones de compilación; consulta el [proyecto FFmpeg](https://ffmpeg.org/legal.html). La app busca `ffmpeg.exe` en `PATH` y en WinGet Links del perfil de Windows. No modifica ni empaqueta esa instalación externa.
+Desde la versión 0.5.0, el paquete Windows incluye FFmpeg y FFprobe 9.0.2 de la distribución estática full de Gyan, ejecutados como procesos independientes. Su procedencia y SHA-256 se fijan en `packaging/ffmpeg-runtime.json`. La preparación y la compilación rechazan herramientas incompletas o alteradas; el usuario final no necesita instalar FFmpeg ni modificar el PATH de Windows.
+
+La compilación del proveedor declara GPL v3. Se conservan su `LICENSE`, `README.txt` con configuración y librerías, y el manifiesto de procedencia en `docs/ffmpeg` del instalador y dentro del runtime. Fuente de FFmpeg correspondiente: https://github.com/FFmpeg/FFmpeg/commit/946fcce07b. Distribución del proveedor: https://github.com/GyanD/codexffmpeg/releases/tag/9.0.2. Consulta los términos de cada componente y los [avisos del proyecto FFmpeg](https://ffmpeg.org/legal.html).
+
+La Release 0.5.0 adjunta también el archivo de fuentes de FFmpeg correspondiente y los avisos/configuración del proveedor. Las versiones anteriores no incluían estas herramientas.
 
 ## Datos de audio de validación
 
