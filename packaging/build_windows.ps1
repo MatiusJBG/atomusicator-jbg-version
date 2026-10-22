@@ -11,8 +11,21 @@ if (-not (Test-Path $python)) {
 & $python -m pip install -e ".[desktop,separation-cpu]"
 if ($LASTEXITCODE -ne 0) { throw "No se pudieron instalar las dependencias de empaquetado." }
 
-& $python -m PyInstaller --noconfirm packaging/SeparadorVocal.spec
-if ($LASTEXITCODE -ne 0) { throw "Falló PyInstaller." }
+# Do not let bundled workspace runtimes on PATH become accidental PyInstaller
+# dependencies. Those DLLs belong to the build host and can shadow Qt DLLs.
+$runtimeCacheFragment = [string]::Join([IO.Path]::DirectorySeparatorChar, @(".cache", "codex-runtimes"))
+$originalPath = $env:PATH
+try {
+    $env:PATH = ($originalPath -split [IO.Path]::PathSeparator | Where-Object {
+        $_ -notmatch [regex]::Escape($runtimeCacheFragment)
+    }) -join [IO.Path]::PathSeparator
+
+    & $python -m PyInstaller --noconfirm packaging/SeparadorVocal.spec
+    if ($LASTEXITCODE -ne 0) { throw "Falló PyInstaller." }
+}
+finally {
+    $env:PATH = $originalPath
+}
 
 $iscc = (Get-Command ISCC.exe -ErrorAction SilentlyContinue).Source
 if (-not $iscc) {
