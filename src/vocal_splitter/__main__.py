@@ -18,6 +18,7 @@ from vocal_splitter.infrastructure.separation.audio_separator_engine import (
 )
 from vocal_splitter.infrastructure.separation.model_profile import load_reviewed_profiles
 from vocal_splitter.ui.main_window import MainWindow
+from vocal_splitter.infrastructure.audio.ffmpeg import ensure_ffmpeg_on_path, find_ffprobe
 
 
 class _DiagnosticCancellation:
@@ -26,6 +27,9 @@ class _DiagnosticCancellation:
 
 
 def main() -> int:
+    # Third-party decoders invoke bare command names. This changes only this
+    # process and its children, never Windows' user/system PATH or the registry.
+    ensure_ffmpeg_on_path()
     if "--diagnostics-separation" in sys.argv[1:]:
         return _run_separation_diagnostics()
     if "--diagnostics" in sys.argv[1:]:
@@ -60,8 +64,9 @@ def _run_diagnostics() -> int:
         return 1
 
     logging.getLogger(__name__).info(
-        "Desktop self-check passed; ffmpeg=%s; inference=%s; projects=%s",
+        "Desktop self-check passed; ffmpeg=%s; ffprobe=%s; inference=%s; projects=%s",
         ffmpeg_path,
+        find_ffprobe(),
         inference_runtime,
         projects_directory,
     )

@@ -30,13 +30,13 @@ Descarga el instalador más reciente desde [Releases](https://github.com/MatiusJ
 Requisitos:
 
 - Windows 10/11 de 64 bits.
-- FFmpeg disponible en `PATH` para separación y cambio de pitch. Para cambio de pitch, la compilación debe incluir el filtro `rubberband`.
+- El instalador 0.5.0 incluye FFmpeg/FFprobe con Rubber Band; no requiere instalarlos aparte ni modificar PATH.
 - Conexión a Internet solo para la descarga inicial de los modelos habilitados; luego el modelo se reutiliza desde la caché local.
 - Memoria y espacio en disco suficientes para cargar y procesar la duración completa. El audio se conserva en el equipo.
 
 ## Ejecución desde el código
 
-Necesitas Python 3.11, 3.12 o 3.13 de 64 bits y FFmpeg. En PowerShell, desde la carpeta del repositorio:
+Necesitas Python 3.11, 3.12 o 3.13 de 64 bits. Para preparar la misma copia verificada de FFmpeg que se incluye en el instalador, ejecuta `python packaging/prepare_ffmpeg.py` tras instalar las dependencias. En PowerShell, desde la carpeta del repositorio:
 
 ```powershell
 py -3.13 -m venv .venv
@@ -64,7 +64,7 @@ La rama `codex/frontend-figma-refactor` implementa las tres vistas del prototipo
 
 ![Mezclador con audio sintético de prueba](docs/images/frontend-mixer.png)
 
-El instalador publicado de la versión 0.4.0 corresponde a la interfaz anterior. Para probar este rediseño, ejecuta el código de esta rama siguiendo las instrucciones de desarrollo. El análisis de la referencia está en [frontend-figma-design.md](docs/frontend-figma-design.md) y la validación en [frontend-figma-validation.md](docs/frontend-figma-validation.md).
+La versión 0.5.0 incorpora este rediseño y las herramientas de audio necesarias dentro del paquete Windows. El análisis de la referencia está en [frontend-figma-design.md](docs/frontend-figma-design.md) y la validación en [frontend-figma-validation.md](docs/frontend-figma-validation.md).
 
 Las sesiones y resultados se crean por defecto bajo `%LOCALAPPDATA%\Separador Vocal\Separador Vocal\projects`, dentro de `outputs`. Esto evita que la carpeta Documentos esté redirigida a OneDrive u otra ubicación sincronizada. Si una versión anterior dejó guardada una ruta inválida o protegida, la app la reemplaza por esta carpeta local y lo registra en el log. Cambia la carpeta desde **Archivo → Carpeta de proyectos…** si necesitas otra ubicación local; la app verifica permisos y escritura antes de aceptarla.
 
@@ -72,7 +72,7 @@ Las sesiones y resultados se crean por defecto bajo `%LOCALAPPDATA%\Separador Vo
 
 ### `No se encontró FFmpeg`
 
-Instala FFmpeg y reinicia Separador Vocal. Comprueba `ffmpeg -version` en una nueva ventana de PowerShell. La app resuelve los enlaces simbólicos de WinGet a la ruta real del ejecutable y verifica FFmpeg antes de cargar los modelos.
+Instala la versión 0.5.0 o posterior desde Releases. Esta versión trae sus propios componentes de audio y los comprueba antes de cargar los modelos. Si la instalación está incompleta, vuelve a ejecutar el instalador completo.
 
 ### `ERROR_UNTRUSTED_MOUNT_POINT` o código 448
 
@@ -116,7 +116,7 @@ El script crea el ejecutable y el instalador en `dist/`. Los artefactos se publi
 - El código de `python-audio-separator` está publicado bajo MIT. La licencia del motor no determina por sí sola los derechos de cada peso.
 - El README de UVR solicita crédito a UVR, Anjok07 y aufr33 y pide respetar MIT para integrar sus modelos. El catálogo oficial identifica los perfiles vocales y los perfiles Kuielab de batería/bajo. Procedencia y hashes se guardan en `src/vocal_splitter/infrastructure/separation/model_license_manifest.json`; no se empaquetan los pesos.
 - La app descarga únicamente los perfiles enumerados en su manifiesto y muestra confirmación antes de la primera descarga. Revisa `docs/third-party-notices.md` antes de distribuir una versión o usarla comercialmente.
-- Los modelos, FFmpeg y las grabaciones del usuario no forman parte del repositorio ni del instalador. Las canciones permanecen en el equipo; no hay subida a nube ni telemetría.
+- FFmpeg/FFprobe se incluyen en el instalador con sus licencias y procedencia. Los modelos se descargan bajo demanda; las grabaciones del usuario permanecen en el equipo y no se incluyen en el repositorio ni en el instalador.
 - El instalador se construyó con Inno Setup. Sus autores solicitan comprar una licencia comercial si el programa se usa en contexto comercial; revisa sus [condiciones actuales](https://jrsoftware.org/isorder.php) antes de una distribución comercial.
 
 ## Flujo Git

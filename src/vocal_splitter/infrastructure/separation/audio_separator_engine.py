@@ -29,7 +29,7 @@ from vocal_splitter.domain.separation_job import SeparationStage
 from vocal_splitter.domain.separation_result import SeparationResult
 from vocal_splitter.domain.stem import Stem, StemKind
 from vocal_splitter.infrastructure.audio.metadata_reader import MetadataReader
-from vocal_splitter.infrastructure.audio.ffmpeg import ensure_ffmpeg_on_path
+from vocal_splitter.infrastructure.audio.ffmpeg import ensure_ffmpeg_on_path, find_ffprobe
 from vocal_splitter.infrastructure.separation.model_profile import (
     ModelProfile,
     ModelProfileError,
@@ -285,26 +285,29 @@ class AudioSeparatorEngine:
     @staticmethod
     def _ensure_ffmpeg() -> str:
         executable = ensure_ffmpeg_on_path()
-        if executable is None:
+        probe = find_ffprobe()
+        if executable is None or probe is None:
             raise SeparationFfmpegUnavailableError()
-        try:
-            completed = subprocess.run(
-                [executable, "-version"],
-                check=False,
-                capture_output=True,
-                text=True,
-                timeout=10,
-            )
-        except (OSError, subprocess.SubprocessError) as error:
-            raise SeparationFfmpegUnavailableError(
-                f"Se encontró FFmpeg, pero Windows no pudo ejecutarlo desde {executable}: "
-                f"{error}. Reinstala FFmpeg o usa una ruta local sin enlaces simbólicos."
-            ) from error
-        if completed.returncode != 0:
-            detail = completed.stderr.strip() or completed.stdout.strip()
-            raise SeparationFfmpegUnavailableError(
-                f"FFmpeg no inició correctamente desde {executable}. {detail}".strip()
-            )
+        for tool in (executable, probe):
+            try:
+                completed = subprocess.run(
+                    [tool, "-version"],
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
+                    creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+                )
+            except (OSError, subprocess.SubprocessError) as error:
+                raise SeparationFfmpegUnavailableError(
+                    f"Windows no pudo ejecutar el componente de audio {tool}: "
+                    f"{error}. Reinstala la aplicación desde su instalador completo."
+                ) from error
+            if completed.returncode != 0:
+                detail = completed.stderr.strip() or completed.stdout.strip()
+                raise SeparationFfmpegUnavailableError(
+                    f"El componente de audio {tool} no inició correctamente. {detail}".strip()
+                )
         return executable
 
     def _ensure_model(
