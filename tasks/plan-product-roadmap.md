@@ -6,5 +6,5 @@ Las ramas feature parten de `develop`; commits pequeños y descriptivos se integ
 2. `vocal-separation`: configurar solapamiento del modelo MDX y mantener segmentación interna para reducir discontinuidades; dejar parámetros registrados. **Implementado.**
 3. `four-stem-separation`: agregar batería, bajo y otros cuando se apruebe un modelo con derechos compatibles y se verifique la respuesta del motor. **Bloqueo de licencia de pesos.**
 4. `export-library`: exportar copias WAV de los stems a una ubicación elegida desde el mezclador. **Implementado.**
-5. `packaging`: instalador Windows que excluye audio, modelos y FFmpeg; guía reproducible y adjunto en GitHub Release. **v0.2.0 publicado; recompilar v0.3.0.**
-6. Revisar el diff, compilar/verificar a mano la aplicación, crear commits atómicos por rama, integrar cada rama en `develop` y subir la rama de integración. Nunca integrar `develop` en `main`.
+5. `packaging`: instalador Windows que excluye audio, modelos y FFmpeg; guía reproducible y adjunto en GitHub Release. **v0.3.0 publicado.**
+6. Revisar el diff, compilar/verificar a mano la aplicación, crear commits atómicos por rama, integrar cada rama en `develop` y subir la rama de integración. **Completado. `main` queda sin cambios.**

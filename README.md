@@ -22,7 +22,7 @@ Esta versión ofrece voz principal, coros/residuo vocal y acompañamiento. No ge
 
 ## Instalación para uso
 
-Descarga `SeparadorVocal-Setup.exe` desde la sección **Releases** del repositorio. El instalador no incluye modelos ni audio del usuario. Al abrir la app, instala los componentes de inferencia según los pasos de la sección siguiente.
+Descarga [Separador Vocal 0.3.0](https://github.com/MatiusJBG/atomusicator-jbg-version/releases/latest) desde **Releases**. El instalador no incluye modelos ni audio del usuario. Al abrir la app, instala los componentes de inferencia según los pasos de la sección siguiente.
 
 Requisitos:
 

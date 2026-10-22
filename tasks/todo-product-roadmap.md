@@ -28,12 +28,12 @@
 - [x] `.gitignore` cubre entornos, resultados, modelos y archivos de audio generados.
 - [x] Definición PyInstaller/Inno Setup que excluye audio, modelos y FFmpeg.
 - [x] Construir el instalador v0.2.0 e iniciar el ejecutable empaquetado.
-- [ ] Recompilar y verificar el instalador v0.3.0.
-- [ ] Integrar la rama de documentación/empaquetado en `develop` y subirlo.
+- [x] Recompilar el instalador v0.3.0 y arrancar el ejecutable empaquetado.
+- [x] Integrar ramas de funcionalidad/documentación a `develop` y subirlo.
 - [x] Adjuntar el instalador v0.2.0 a una GitHub Release.
-- [ ] Adjuntar el instalador v0.3.0 a una GitHub Release.
+- [x] Adjuntar el instalador v0.3.0 a la GitHub Release `v0.3.0`.
 
 ## Flujo Git
 
 - [x] Crear ramas feature/chore desde `develop`, commits atómicos y fast-forward de vuelta a `develop`.
-- [ ] Mantener `main` sin modificaciones; el mantenedor integrará `develop` cuando lo decida.
+- [x] Mantener `main` sin modificaciones; el mantenedor integrará `develop` cuando lo decida.
