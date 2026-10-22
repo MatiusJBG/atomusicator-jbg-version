@@ -4,18 +4,27 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "separador-vocal"
-version = "0.1.0"
+version = "0.2.0"
 description = "Aplicación local para separar voz principal, coros y acompañamiento."
 requires-python = ">=3.11,<3.14"
 dependencies = [
     "PySide6-Essentials>=6.7,<7",
     "mutagen>=1.47,<2",
+    "numpy>=1.26,<3",
+    "soundfile>=0.12,<1",
 ]
 
 [project.optional-dependencies]
 separation-cpu = [
     "audio-separator[cpu]==0.47.0",
     "audioread>=3,<4",
+]
+playback = [
+    "sounddevice>=0.5,<1",
+]
+desktop = [
+    "sounddevice>=0.5,<1",
+    "pyinstaller>=6.10,<7",
 ]
 
 [tool.setuptools.packages.find]

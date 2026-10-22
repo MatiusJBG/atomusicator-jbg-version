@@ -27,6 +27,8 @@ from vocal_splitter.infrastructure.separation.audio_separator_engine import Audi
 from vocal_splitter.infrastructure.separation.model_profile import load_reviewed_profiles
 from vocal_splitter.infrastructure.projects.settings_store import SettingsStore
 from vocal_splitter.ui.import_worker import ImportWorker
+from vocal_splitter.ui.audio_workbench import AudioWorkbench
+from vocal_splitter.ui.pitch_worker import PitchWorker
 from vocal_splitter.ui.settings_dialog import SettingsDialog
 from vocal_splitter.ui.separation_worker import SeparationWorker
 
@@ -103,6 +105,10 @@ class MainWindow(QMainWindow):
         self._current_session: AudioSession | None = None
         self._separation_thread: QThread | None = None
         self._separation_worker: SeparationWorker | None = None
+        self._separation_result: SeparationResult | None = None
+        self._pitch_thread: QThread | None = None
+        self._pitch_worker: PitchWorker | None = None
+        self.workbench: AudioWorkbench | None = None
 
         self._build_menu()
         self._build_content()
@@ -113,6 +119,7 @@ class MainWindow(QMainWindow):
             "QPushButton { background: #56d6d1; color: #102128; border: 0;"
             " border-radius: 7px; padding: 10px 18px; font-weight: 650; }"
             "QPushButton:hover { background: #79e3de; }"
+            "QPushButton:checked { background: #ffb547; color: #19202a; }"
             "QPushButton:disabled { background: #3b7776; color: #d7e5e5; }"
             "QFrame#dropArea { background: #101923; border: 1px dashed #49606c;"
             " border-radius: 10px; }"
@@ -168,6 +175,10 @@ class MainWindow(QMainWindow):
 
         self.drop_area = DropArea()
         self.drop_area.file_dropped.connect(self._start_import)
+        self.workbench_host = QWidget()
+        self.workbench_layout = QVBoxLayout(self.workbench_host)
+        self.workbench_layout.setContentsMargins(0, 0, 0, 0)
+        self.workbench_host.hide()
 
         self.result_label = QLabel("Tus archivos originales permanecen en su ubicación.")
         self.result_label.setObjectName("result")
@@ -185,6 +196,7 @@ class MainWindow(QMainWindow):
         content.addWidget(subtitle)
         content.addSpacing(18)
         content.addWidget(self.drop_area, 1)
+        content.addWidget(self.workbench_host, 1)
         content.addWidget(self.progress)
         content.addWidget(self.result_label)
 
@@ -332,6 +344,7 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage(message)
 
     def _separation_succeeded(self, result: SeparationResult) -> None:
+        self._separation_result = result
         labels = {
             StemKind.LEAD_VOCAL: "Voz principal",
             StemKind.BACKING_VOCALS: "Coros / residuo vocal",
@@ -345,7 +358,56 @@ class MainWindow(QMainWindow):
             "Separación lista. La voz principal y los coros son estimaciones; "
             "escucha las pistas antes de usarlas.\n" + paths
         )
+        self.drop_area.hide()
+        if self.workbench is not None:
+            self.workbench.dispose()
+            self.workbench.deleteLater()
+        self.workbench = AudioWorkbench(result, self.workbench_host)
+        self.workbench.pitch_requested.connect(self._start_pitch_render)
+        self.workbench_layout.addWidget(self.workbench)
+        self.workbench_host.show()
         self.statusBar().showMessage("Separación lista")
+
+    def _start_pitch_render(self, semitones: int) -> None:
+        if self._pitch_thread is not None or self._separation_result is None or self._current_session is None:
+            return
+        if self.workbench is not None:
+            self.workbench.apply_pitch_button.setEnabled(False)
+            self.workbench.play_button.setEnabled(False)
+        thread = QThread(self)
+        worker = PitchWorker(
+            self._separation_result,
+            self._current_session.directory / "outputs" / "pitch-renders",
+            semitones,
+        )
+        worker.moveToThread(thread)
+        worker.finished.connect(self._pitch_rendered)
+        worker.failed.connect(self._pitch_failed)
+        worker.done.connect(thread.quit)
+        worker.done.connect(worker.deleteLater)
+        thread.started.connect(worker.run)
+        thread.finished.connect(self._pitch_finished)
+        thread.finished.connect(thread.deleteLater)
+        self._pitch_thread = thread
+        self._pitch_worker = worker
+        self.statusBar().showMessage(f"Renderizando pitch: {semitones:+d} semitonos…")
+        thread.start()
+
+    def _pitch_rendered(self, result: SeparationResult) -> None:
+        if self.workbench is not None:
+            self.workbench.set_result(result)
+        self.statusBar().showMessage("Transposición renderizada; tempo y originales conservados")
+
+    def _pitch_failed(self, message: str) -> None:
+        QMessageBox.warning(self, "No se pudo cambiar el pitch", message)
+        self.statusBar().showMessage("Falló la transposición; los stems originales siguen disponibles")
+
+    def _pitch_finished(self) -> None:
+        self._pitch_thread = None
+        self._pitch_worker = None
+        if self.workbench is not None:
+            self.workbench.apply_pitch_button.setEnabled(True)
+            self.workbench.play_button.setEnabled(True)
 
     def _separation_failed(self, message: str, partial_result: object) -> None:
         if isinstance(partial_result, SeparationResult):
@@ -383,6 +445,12 @@ class MainWindow(QMainWindow):
             self._cancel_separation()
             self.statusBar().showMessage(
                 "La operación se está cancelando. Cierra la ventana cuando termine."
+            )
+            event.ignore()
+            return
+        if self._pitch_thread is not None:
+            self.statusBar().showMessage(
+                "El render de pitch sigue en curso. Cierra la ventana cuando termine."
             )
             event.ignore()
             return
