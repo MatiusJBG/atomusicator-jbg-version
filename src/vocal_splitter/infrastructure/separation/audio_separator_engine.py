@@ -6,7 +6,6 @@ import os
 import time
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
-from shutil import which
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
@@ -28,6 +27,7 @@ from vocal_splitter.domain.separation_job import SeparationStage
 from vocal_splitter.domain.separation_result import SeparationResult
 from vocal_splitter.domain.stem import Stem, StemKind
 from vocal_splitter.infrastructure.audio.metadata_reader import MetadataReader
+from vocal_splitter.infrastructure.audio.ffmpeg import ensure_ffmpeg_on_path
 from vocal_splitter.infrastructure.separation.model_profile import (
     ModelProfile,
     ModelProfileError,
@@ -41,6 +41,8 @@ _STAGE_ONE_PROFILE = "uvr-mdxnet-main-v1"
 _STAGE_TWO_PROFILE = "uvr-mdxnet-kara-2-v1"
 _MAX_MODEL_BYTES = 512 * 1024 * 1024
 _DOWNLOAD_CHUNK_BYTES = 1024 * 1024
+_MDX_SEGMENT_SIZE = 256
+_MDX_OVERLAP = 0.35
 
 
 class AudioSeparatorEngine:
@@ -139,6 +141,13 @@ class AudioSeparatorEngine:
                 model_file_dir=str(self._model_cache_dir),
                 output_format="WAV",
                 log_level=logging.WARNING,
+                mdx_params={
+                    "hop_length": 1024,
+                    "segment_size": _MDX_SEGMENT_SIZE,
+                    "overlap": _MDX_OVERLAP,
+                    "batch_size": 1,
+                    "enable_denoise": False,
+                },
             )
             separator.load_model(model_filename=profile.filename)
             cancellation.raise_if_cancelled()
@@ -164,7 +173,9 @@ class AudioSeparatorEngine:
             ("model_filename", profile.filename),
             ("outputs", ",".join(f"{label}:{filename}" for label, filename in output_names.items())),
             ("device", "auto (selección de audio-separator)"),
-            ("segment_size", "default (audio-separator)"),
+            ("mdx_segment_size", str(_MDX_SEGMENT_SIZE)),
+            ("mdx_overlap", str(_MDX_OVERLAP)),
+            ("mdx_batch_size", "1"),
         )
         return SeparationResult(
             validated_stems,
@@ -195,7 +206,7 @@ class AudioSeparatorEngine:
 
     @staticmethod
     def _ensure_ffmpeg() -> None:
-        if which("ffmpeg") is None:
+        if ensure_ffmpeg_on_path() is None:
             raise SeparationFfmpegUnavailableError()
 
     def _ensure_model(

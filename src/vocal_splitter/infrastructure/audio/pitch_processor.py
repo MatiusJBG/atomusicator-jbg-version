@@ -33,6 +33,7 @@ class PitchProcessor:
     def render(self, source: Path, destination: Path, semitones: int) -> Path:
         if not -12 <= semitones <= 12:
             raise PitchProcessingError("El cambio debe estar entre -12 y +12 semitonos")
+        destination.parent.mkdir(parents=True, exist_ok=True)
         if semitones == 0:
             shutil.copy2(source, destination)
             return destination
@@ -41,7 +42,6 @@ class PitchProcessor:
                 "Esta compilación de FFmpeg no incluye el filtro Rubber Band. "
                 "Instala una compilación que lo incluya para cambiar el pitch."
             )
-        destination.parent.mkdir(parents=True, exist_ok=True)
         ratio = math.pow(2.0, semitones / 12.0)
         temporary = destination.with_suffix(destination.suffix + ".part.wav")
         command = [
