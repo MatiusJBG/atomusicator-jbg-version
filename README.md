@@ -22,7 +22,7 @@ Esta versión ofrece voz principal, coros/residuo vocal y acompañamiento. No ge
 
 ## Instalación para uso
 
-Descarga [Separador Vocal 0.3.2](https://github.com/MatiusJBG/atomusicator-jbg-version/releases/latest) desde **Releases**. El instalador no incluye modelos ni audio del usuario. Al abrir la app, instala los componentes de inferencia según los pasos de la sección siguiente.
+Descarga [Separador Vocal 0.3.3](https://github.com/MatiusJBG/atomusicator-jbg-version/releases/latest) desde **Releases**. El instalador usa **Archivos de programa** (no la raíz de `C:\`) y solicita los permisos de Windows necesarios. Los modelos, proyectos y stems se guardan localmente en `%LOCALAPPDATA%\Separador Vocal\Separador Vocal`; el audio fuente permanece en su ubicación original. El instalador no incluye modelos ni audio del usuario.
 
 Requisitos:
 
@@ -53,17 +53,21 @@ Si PowerShell impide activar el entorno, ejecuta los comandos directamente con `
 4. Ajusta cada deslizador o pulsa **M** para silenciar y **S** para escuchar solo esa pista.
 5. Elige de -12 a +12 semitonos y pulsa **Aplicar pitch**. El render se hace en segundo plano, mantiene el tempo y genera archivos derivados dentro de la sesión.
 
-Las sesiones se crean bajo `Documentos\Separador Vocal` por defecto. Cambia la carpeta desde **Archivo → Carpeta de proyectos…**. Los resultados se guardan en la carpeta de sesión, dentro de `outputs`.
+Las sesiones y resultados se crean por defecto bajo `%LOCALAPPDATA%\Separador Vocal\Separador Vocal\projects`, dentro de `outputs`. Esto evita que la carpeta Documentos esté redirigida a OneDrive u otra ubicación sincronizada. Si una versión anterior dejó guardada una ruta inválida o protegida, la app la reemplaza por esta carpeta local y lo registra en el log. Cambia la carpeta desde **Archivo → Carpeta de proyectos…** si necesitas otra ubicación local; la app verifica permisos y escritura antes de aceptarla.
 
 ## Problemas frecuentes
 
 ### `No se encontró FFmpeg`
 
-Instala FFmpeg y reinicia Separador Vocal. Comprueba `ffmpeg -version` en una nueva ventana de PowerShell y que `where.exe ffmpeg` devuelva una ruta.
+Instala FFmpeg y reinicia Separador Vocal. Comprueba `ffmpeg -version` en una nueva ventana de PowerShell. La app resuelve los enlaces simbólicos de WinGet a la ruta real del ejecutable y verifica FFmpeg antes de cargar los modelos.
+
+### `ERROR_UNTRUSTED_MOUNT_POINT` o código 448
+
+Esta versión evita recorrer el enlace simbólico de `WinGet\Links\ffmpeg.exe`: lee el destino del enlace y ejecuta FFmpeg desde su carpeta real. Si el aviso persiste, comprueba que el destino mostrado por `Get-Item "$env:LOCALAPPDATA\Microsoft\WinGet\Links\ffmpeg.exe"` exista y ejecuta `ffmpeg -version`.
 
 ### `DLL load failed while importing QtWidgets`
 
-Desinstala la versión anterior desde **Configuración → Aplicaciones → Aplicaciones instaladas**, cierra cualquier ventana de Separador Vocal y vuelve a instalar la versión más reciente desde **Releases**. La versión 0.3.1 fija las DLL de Qt y Python incluidas en el paquete para evitar conflictos con runtimes de otras aplicaciones. La versión 0.3.2 registra los errores locales en `%LOCALAPPDATA%\Separador Vocal\Separador Vocal\logs\separador-vocal.log` y explica la ruta y el motivo cuando Windows no permite guardar resultados.
+Desinstala la versión anterior desde **Configuración → Aplicaciones → Aplicaciones instaladas**, cierra cualquier ventana de Separador Vocal y vuelve a instalar la versión más reciente desde **Releases**. La versión 0.3.1 fija las DLL de Qt y Python, la 0.3.2 mejora los diagnósticos de escritura y la 0.3.3 resuelve los enlaces de FFmpeg de WinGet y guarda proyectos en AppData local.
 
 ### El cambio de pitch indica que falta `rubberband`
 
@@ -86,8 +90,11 @@ El modelo distingue patrones acústicos, no roles musicales. Voces dobladas, cor
 ```powershell
 python -m pip install -e ".[desktop,separation-cpu]"
 python -m compileall -q src
+python -m unittest discover -s tests -v
 ./packaging/build_windows.ps1
 ```
+
+El script de empaquetado corre primero las pruebas de rutas/permisos, compila el instalador y ejecuta `packaging/smoke_test_windows.ps1`. El smoke test arranca `SeparadorVocal.exe --diagnostics` (comprueba Qt, FFmpeg, la ruta de datos local y una escritura real), y luego inicia la ventana gráfica para confirmar que no se cierra al arrancar.
 
 El script crea el ejecutable y el instalador en `dist/`. Los artefactos se publican como adjuntos de una Release; no se suben al historial Git.
 

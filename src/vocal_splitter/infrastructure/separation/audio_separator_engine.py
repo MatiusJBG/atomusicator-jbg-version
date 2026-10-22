@@ -3,6 +3,7 @@
 import hashlib
 import logging
 import os
+import subprocess
 import time
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
@@ -114,6 +115,8 @@ class AudioSeparatorEngine:
         progress: ProgressCallback,
         cancellation: CancellationToken,
     ) -> SeparationResult:
+        cancellation.raise_if_cancelled()
+        self._ensure_ffmpeg()
         try:
             from audio_separator.separator import Separator
         except ImportError as error:
@@ -126,8 +129,6 @@ class AudioSeparatorEngine:
                 f"No hay perfil revisado para {profile_id}"
             ) from error
 
-        cancellation.raise_if_cancelled()
-        self._ensure_ffmpeg()
         model_path = self._ensure_model(profile, progress, cancellation)
         cancellation.raise_if_cancelled()
 
@@ -205,9 +206,29 @@ class AudioSeparatorEngine:
         return EngineUsage("python-audio-separator", engine_version, (usage,))
 
     @staticmethod
-    def _ensure_ffmpeg() -> None:
-        if ensure_ffmpeg_on_path() is None:
+    def _ensure_ffmpeg() -> str:
+        executable = ensure_ffmpeg_on_path()
+        if executable is None:
             raise SeparationFfmpegUnavailableError()
+        try:
+            completed = subprocess.run(
+                [executable, "-version"],
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+        except (OSError, subprocess.SubprocessError) as error:
+            raise SeparationFfmpegUnavailableError(
+                f"Se encontró FFmpeg, pero Windows no pudo ejecutarlo desde {executable}: "
+                f"{error}. Reinstala FFmpeg o usa una ruta local sin enlaces simbólicos."
+            ) from error
+        if completed.returncode != 0:
+            detail = completed.stderr.strip() or completed.stdout.strip()
+            raise SeparationFfmpegUnavailableError(
+                f"FFmpeg no inició correctamente desde {executable}. {detail}".strip()
+            )
+        return executable
 
     def _ensure_model(
         self,

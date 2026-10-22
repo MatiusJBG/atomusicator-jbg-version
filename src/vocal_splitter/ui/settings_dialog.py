@@ -76,4 +76,15 @@ class SettingsDialog(QDialog):
         if not self._directory.text().strip():
             QMessageBox.warning(self, "Carpeta requerida", "Escribe o elige una carpeta.")
             return
+        settings = self.project_settings()
+        try:
+            settings.validate_writable_local_directory()
+        except (OSError, ValueError) as error:
+            QMessageBox.warning(
+                self,
+                "Carpeta no disponible",
+                f"No se puede usar esta ubicación para guardar proyectos:\n"
+                f"{settings.projects_directory}\n\n{error}",
+            )
+            return
         self.accept()
