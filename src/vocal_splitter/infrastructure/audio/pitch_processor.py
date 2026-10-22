@@ -30,7 +30,8 @@ class PitchProcessor:
         )
         return result.returncode == 0 and "rubberband" in result.stdout
 
-    def render(self, source: Path, destination: Path, semitones: int) -> Path:
+    def render(self, source: Path, destination: Path, semitones: int,
+               *, preserve_formants: bool = False) -> Path:
         if not -12 <= semitones <= 12:
             raise PitchProcessingError("El cambio debe estar entre -12 y +12 semitonos")
         destination.parent.mkdir(parents=True, exist_ok=True)
@@ -46,7 +47,8 @@ class PitchProcessor:
         temporary = destination.with_suffix(destination.suffix + ".part.wav")
         command = [
             self.ffmpeg, "-nostdin", "-hide_banner", "-loglevel", "error", "-y",
-            "-i", str(source), "-af", f"rubberband=pitch={ratio:.12f}:tempo=1.0",
+            "-i", str(source), "-af",
+            f"rubberband=pitch={ratio:.12f}:tempo=1.0:formant={'preserved' if preserve_formants else 'shifted'}",
             "-c:a", "pcm_f32le", str(temporary),
         ]
         try:
