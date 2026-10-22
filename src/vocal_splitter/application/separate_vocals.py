@@ -71,7 +71,7 @@ class SeparateVocals:
             logger.exception("Could not create separation directories in %s", session_dir)
             raise SeparationStorageError(self._storage_message(error, session_dir)) from error
 
-        progress(SeparationStage.PREPARING, 8, "Preparando separación…")
+        progress(SeparationStage.PREPARING, 0, "Preparando separación…")
         cancellation.raise_if_cancelled()
         try:
             first_stage = self._separator.separate_voice_and_instrumental(
