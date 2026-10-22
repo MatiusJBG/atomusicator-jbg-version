@@ -22,7 +22,7 @@ Esta versión ofrece voz principal, coros/residuo vocal y acompañamiento. No ge
 
 ## Instalación para uso
 
-Descarga [Separador Vocal 0.3.1](https://github.com/MatiusJBG/atomusicator-jbg-version/releases/latest) desde **Releases**. El instalador no incluye modelos ni audio del usuario. Al abrir la app, instala los componentes de inferencia según los pasos de la sección siguiente.
+Descarga [Separador Vocal 0.3.2](https://github.com/MatiusJBG/atomusicator-jbg-version/releases/latest) desde **Releases**. El instalador no incluye modelos ni audio del usuario. Al abrir la app, instala los componentes de inferencia según los pasos de la sección siguiente.
 
 Requisitos:
 
@@ -63,7 +63,7 @@ Instala FFmpeg y reinicia Separador Vocal. Comprueba `ffmpeg -version` en una nu
 
 ### `DLL load failed while importing QtWidgets`
 
-Desinstala la versión anterior desde **Configuración → Aplicaciones → Aplicaciones instaladas**, cierra cualquier ventana de Separador Vocal y vuelve a instalar la versión más reciente desde **Releases**. La versión 0.3.1 fija las DLL de Qt y Python incluidas en el paquete para evitar conflictos con runtimes de otras aplicaciones.
+Desinstala la versión anterior desde **Configuración → Aplicaciones → Aplicaciones instaladas**, cierra cualquier ventana de Separador Vocal y vuelve a instalar la versión más reciente desde **Releases**. La versión 0.3.1 fija las DLL de Qt y Python incluidas en el paquete para evitar conflictos con runtimes de otras aplicaciones. La versión 0.3.2 registra los errores locales en `%LOCALAPPDATA%\Separador Vocal\Separador Vocal\logs\separador-vocal.log` y explica la ruta y el motivo cuando Windows no permite guardar resultados.
 
 ### El cambio de pitch indica que falta `rubberband`
 
