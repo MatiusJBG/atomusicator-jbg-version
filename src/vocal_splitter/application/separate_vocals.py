@@ -1,0 +1,278 @@
+"""Orquestación de la separación local en dos etapas."""
+
+import json
+import logging
+import os
+import shutil
+import uuid
+from dataclasses import replace
+from pathlib import Path
+
+from vocal_splitter.application.ports.vocal_separator import (
+    CancellationToken,
+    ProgressCallback,
+    VocalSeparator,
+)
+from vocal_splitter.application.separation_errors import (
+    PartialSeparationError,
+    SeparationCancelledError,
+    SeparationError,
+    SeparationOutputError,
+    SeparationStorageError,
+)
+from vocal_splitter.domain.audio_session import AudioSession
+from vocal_splitter.domain.separation_job import SeparationStage
+from vocal_splitter.domain.separation_result import SeparationResult
+from vocal_splitter.domain.stem import Stem, StemKind
+from vocal_splitter.infrastructure.projects.session_store import SessionStore
+
+logger = logging.getLogger(__name__)
+
+
+class SeparateVocals:
+    def __init__(
+        self,
+        separator: VocalSeparator,
+        session_store: SessionStore | None = None,
+    ) -> None:
+        self._separator = separator
+        self._session_store = session_store or SessionStore()
+
+    def execute(
+        self,
+        session: AudioSession,
+        *,
+        progress: ProgressCallback,
+        cancellation: CancellationToken,
+    ) -> SeparationResult:
+        job_id = uuid.uuid4().hex
+        session_dir = session.directory.resolve()
+        source = session.asset.source_path.resolve()
+        if not source.is_file():
+            raise SeparationOutputError("No se encuentra el archivo de audio importado")
+        if not (session_dir / "session.json").is_file():
+            raise SeparationOutputError("No se encuentra el manifiesto de la sesión")
+        self._check_free_space(session)
+
+        processing_root = session_dir / "processing"
+        outputs_root = session_dir / "outputs"
+        job_dir = processing_root / job_id
+        stage_one_dir = job_dir / "stage-one"
+        stage_two_dir = job_dir / "stage-two"
+        publish_dir = job_dir / "publish"
+        try:
+            processing_root.mkdir(exist_ok=True)
+            outputs_root.mkdir(exist_ok=True)
+            job_dir.mkdir()
+            stage_one_dir.mkdir()
+            stage_two_dir.mkdir()
+            publish_dir.mkdir()
+        except OSError as error:
+            raise SeparationStorageError() from error
+
+        progress(SeparationStage.PREPARING, 8, "Preparando separación…")
+        cancellation.raise_if_cancelled()
+        try:
+            first_stage = self._separator.separate_voice_and_instrumental(
+                source,
+                stage_one_dir,
+                progress=self._map_progress(progress, 8, 41),
+                cancellation=cancellation,
+            )
+            self._require_kinds(first_stage, {StemKind.VOCAL_MIX, StemKind.INSTRUMENTAL})
+            vocal_mix = first_stage.stem(StemKind.VOCAL_MIX)
+
+            try:
+                second_stage = self._separator.separate_lead_and_backing(
+                    vocal_mix,
+                    stage_two_dir,
+                    progress=self._map_progress(progress, 50, 82),
+                    cancellation=cancellation,
+                )
+                self._require_kinds(
+                    second_stage,
+                    {StemKind.LEAD_VOCAL, StemKind.BACKING_VOCALS},
+                )
+            except SeparationCancelledError:
+                raise
+            except Exception as error:
+                partial_result = self._publish_partial(
+                    session, job_id, first_stage, outputs_root, job_dir
+                )
+                if isinstance(error, SeparationError):
+                    message = (
+                        f"{error.user_message} Se conservaron voz total y acompañamiento "
+                        f"en {partial_result.stems[0].path.parent}."
+                    )
+                else:
+                    logger.exception("Second vocal separation stage failed")
+                    message = (
+                        "Falló la separación entre voz principal y coros. Se conservaron "
+                        f"voz total y acompañamiento en {partial_result.stems[0].path.parent}."
+                    )
+                raise PartialSeparationError(message, partial_result) from error
+
+            instrumental_only = SeparationResult(
+                (first_stage.stem(StemKind.INSTRUMENTAL),),
+                first_stage.engine_usage,
+            )
+            complete = instrumental_only.combine(second_stage)
+            if not complete.is_final:
+                raise SeparationOutputError("El motor no entregó los tres stems finales")
+            cancellation.raise_if_cancelled()
+            progress(SeparationStage.FINALIZING, 90, "Guardando pistas alineadas…")
+            final_names = {
+                StemKind.LEAD_VOCAL: "voz_principal.wav",
+                StemKind.BACKING_VOCALS: "coros.wav",
+                StemKind.INSTRUMENTAL: "acompanamiento.wav",
+            }
+            published_stems: list[Stem] = []
+            for kind, name in final_names.items():
+                stem = complete.stem(kind)
+                target = publish_dir / name
+                os.replace(stem.path, target)
+                published_stems.append(replace(stem, path=target))
+
+            final_result = SeparationResult(tuple(published_stems), complete.engine_usage)
+            output_dir = outputs_root / f"separation-{job_id}"
+            os.replace(publish_dir, output_dir)
+            final_result = SeparationResult(
+                tuple(replace(stem, path=output_dir / stem.path.name) for stem in final_result.stems),
+                final_result.engine_usage,
+            )
+            try:
+                self._session_store.record_separation(
+                    session,
+                    self._record(session, job_id, "complete", final_result),
+                )
+            except OSError:
+                shutil.rmtree(output_dir, ignore_errors=True)
+                raise
+            progress(SeparationStage.FINALIZING, 99, "Separación lista")
+            shutil.rmtree(job_dir, ignore_errors=True)
+            return final_result
+        except SeparationCancelledError:
+            shutil.rmtree(job_dir, ignore_errors=True)
+            raise
+        except PartialSeparationError:
+            raise
+        except SeparationError:
+            shutil.rmtree(job_dir, ignore_errors=True)
+            raise
+        except OSError as error:
+            shutil.rmtree(job_dir, ignore_errors=True)
+            raise SeparationStorageError() from error
+        except Exception as error:
+            shutil.rmtree(job_dir, ignore_errors=True)
+            logger.exception("Unexpected failure in vocal separation")
+            raise SeparationOutputError() from error
+
+    @staticmethod
+    def _check_free_space(session: AudioSession) -> None:
+        asset = session.asset
+        estimated_bytes = int(
+            asset.duration_seconds * asset.sample_rate_hz * asset.channels * 4 * 5
+            + 128 * 1024 * 1024
+        )
+        try:
+            available = shutil.disk_usage(session.directory).free
+        except OSError as error:
+            raise SeparationStorageError() from error
+        if available < estimated_bytes:
+            raise SeparationStorageError(
+                f"Se requieren aproximadamente {estimated_bytes // (1024 * 1024)} MB libres"
+            )
+
+    @staticmethod
+    def _require_kinds(result: SeparationResult, expected: set[StemKind]) -> None:
+        actual = {stem.kind for stem in result.stems}
+        if actual != expected:
+            raise SeparationOutputError("El motor devolvió tipos de salida inesperados")
+
+    @staticmethod
+    def _map_progress(
+        callback: ProgressCallback,
+        lower: int,
+        upper: int,
+    ) -> ProgressCallback:
+        def mapped(stage: SeparationStage, percent: int, message: str) -> None:
+            normalized = lower + round((upper - lower) * max(0, min(percent, 100)) / 100)
+            callback(stage, normalized, message)
+
+        return mapped
+
+    def _publish_partial(
+        self,
+        session: AudioSession,
+        job_id: str,
+        result: SeparationResult,
+        outputs_root: Path,
+        job_dir: Path,
+    ) -> SeparationResult:
+        partial_dir = outputs_root / f"separation-{job_id}-partial"
+        partial_dir.mkdir()
+        names = {
+            StemKind.VOCAL_MIX: "voz_total.wav",
+            StemKind.INSTRUMENTAL: "acompanamiento.wav",
+        }
+        moved: list[Stem] = []
+        for stem in result.stems:
+            target = partial_dir / names[stem.kind]
+            os.replace(stem.path, target)
+            moved.append(replace(stem, path=target))
+        partial_result = SeparationResult(tuple(moved), result.engine_usage)
+        try:
+            self._session_store.record_separation(
+                session,
+                self._record(session, job_id, "partial", partial_result),
+            )
+        except OSError:
+            shutil.rmtree(partial_dir, ignore_errors=True)
+            raise
+        shutil.rmtree(job_dir, ignore_errors=True)
+        return partial_result
+
+    @staticmethod
+    def _record(
+        session: AudioSession,
+        job_id: str,
+        status: str,
+        result: SeparationResult,
+    ) -> dict:
+        session_root = session.directory.resolve()
+        return {
+            "job_id": job_id,
+            "status": status,
+            "stems": [
+                {
+                    "kind": stem.kind.value,
+                    "path": str(stem.path.relative_to(session_root)),
+                    "duration_seconds": stem.duration_seconds,
+                    "sample_rate_hz": stem.sample_rate_hz,
+                    "channels": stem.channels,
+                    "start_offset_seconds": stem.start_offset_seconds,
+                }
+                for stem in result.stems
+            ],
+            "engine": (
+                {
+                    "name": result.engine_usage.name,
+                    "version": result.engine_usage.version,
+                    "models": [
+                        {
+                            "profile_id": model.profile_id,
+                            "filename": model.filename,
+                            "sha256": model.sha256,
+                            "license": model.license,
+                            "source_url": model.source_url,
+                            "attribution": model.attribution,
+                            "elapsed_seconds": model.elapsed_seconds,
+                            "parameters": dict(model.parameters),
+                        }
+                        for model in result.engine_usage.models
+                    ],
+                }
+                if result.engine_usage
+                else None
+            ),
+        }

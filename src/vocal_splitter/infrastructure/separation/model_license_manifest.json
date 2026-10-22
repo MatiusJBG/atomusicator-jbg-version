@@ -1,0 +1,44 @@
+{
+  "manifest_version": 1,
+  "license_basis": [
+    {
+      "url": "https://github.com/Anjok07/ultimatevocalremovergui#license",
+      "statement": "UVR solicita que las aplicaciones de terceros que integren sus modelos respeten la licencia MIT y atribuyan a UVR y sus desarrolladores. El README de UVR indica que sus desarrolladores principales entrenaron los modelos que provee, salvo los modelos Demucs v3/v4 de cuatro stems.",
+      "attribution": "Ultimate Vocal Remover (UVR), Anjok07 y aufr33; código y modelos UVR citados bajo MIT."
+    },
+    {
+      "url": "https://github.com/Anjok07/ultimatevocalremovergui/blob/master/gui_data/model_manual_download.json",
+      "statement": "El catálogo oficial de descargas identifica UVR_MDXNET_Main.onnx y UVR_MDXNET_KARA_2.onnx como modelos MDX-Net disponibles de UVR."
+    }
+  ],
+  "models": [
+    {
+      "profile_id": "uvr-mdxnet-main-v1",
+      "stage": "voice_and_instrumental",
+      "filename": "UVR_MDXNET_Main.onnx",
+      "sha256": "8289784cda38543ff431add4070662813311a8cccfc0112ca82f76d9dba2b4ca",
+      "download_url": "https://github.com/TRvlvr/model_repo/releases/download/all_public_uvr_models/UVR_MDXNET_Main.onnx",
+      "license": "MIT",
+      "license_status": "reviewed",
+      "license_source": "https://github.com/Anjok07/ultimatevocalremovergui#license",
+      "model_catalog_source": "https://github.com/Anjok07/ultimatevocalremovergui/blob/master/gui_data/model_manual_download.json",
+      "sha256_source": "https://huggingface.co/seanghay/uvr_models/blob/main/UVR_MDXNET_Main.onnx",
+      "attribution": "Ultimate Vocal Remover (UVR), Anjok07 y aufr33. Respetar los términos MIT y mostrar atribución.",
+      "notes": "Hash reportado para los bytes del modelo; se verifica contra el archivo obtenido desde la URL oficial antes de inferencia."
+    },
+    {
+      "profile_id": "uvr-mdxnet-kara-2-v1",
+      "stage": "lead_and_backing",
+      "filename": "UVR_MDXNET_KARA_2.onnx",
+      "sha256": "bf32e15105a09c0f7dddd2b67346146334d6f3ecb399ed7638eba2ab07cbf5f4",
+      "download_url": "https://github.com/TRvlvr/model_repo/releases/download/all_public_uvr_models/UVR_MDXNET_KARA_2.onnx",
+      "license": "MIT",
+      "license_status": "reviewed",
+      "license_source": "https://github.com/Anjok07/ultimatevocalremovergui#license",
+      "model_catalog_source": "https://github.com/Anjok07/ultimatevocalremovergui/blob/master/gui_data/model_manual_download.json",
+      "sha256_source": "https://huggingface.co/seanghay/uvr_models/blob/main/UVR_MDXNET_KARA_2.onnx",
+      "attribution": "Ultimate Vocal Remover (UVR), Anjok07 y aufr33. Respetar los términos MIT y mostrar atribución.",
+      "notes": "Hash reportado para los bytes del modelo; se verifica contra el archivo obtenido desde la URL oficial antes de inferencia."
+    }
+  ]
+}
