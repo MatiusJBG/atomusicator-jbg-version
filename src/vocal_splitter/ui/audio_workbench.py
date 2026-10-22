@@ -6,17 +6,17 @@ from pathlib import Path
 
 import numpy as np
 import soundfile as sf
-from PySide6.QtCore import Qt, QTimer, Signal
-from PySide6.QtGui import QColor, QPainter, QPen
+from PySide6.QtCore import QThread, Qt, QTimer, Signal
+from PySide6.QtGui import QColor, QMouseEvent, QPainter, QPen
 from PySide6.QtWidgets import (
-    QFrame, QHBoxLayout, QLabel, QMessageBox, QPushButton, QSlider,
+    QFileDialog, QFrame, QHBoxLayout, QLabel, QMessageBox, QPushButton, QSlider,
     QSpinBox, QVBoxLayout, QWidget,
 )
 
 from vocal_splitter.domain.separation_result import SeparationResult
 from vocal_splitter.domain.stem import StemKind
-from vocal_splitter.infrastructure.audio.pitch_processor import PitchProcessingError
 from vocal_splitter.infrastructure.audio.realtime_mixer import RealtimeMixer
+from vocal_splitter.ui.export_worker import ExportWorker
 
 
 _NAMES = {
@@ -59,7 +59,6 @@ class Waveform(QWidget):
         painter.fillRect(self.rect(), QColor("#101923"))
         if len(self._peaks):
             mid = self.height() / 2
-            step = max(1, self.width() // len(self._peaks))
             painter.setPen(QPen(QColor("#13bfd2"), 1))
             for index, peak in enumerate(self._peaks):
                 amplitude = max(1.0, peak * (self.height() * 0.46))
@@ -69,7 +68,7 @@ class Waveform(QWidget):
         painter.setPen(QPen(QColor("#ff8b6a"), 2))
         painter.drawLine(x, 0, x, self.height())
 
-    def mousePressEvent(self, event: object) -> None:
+    def mousePressEvent(self, event: QMouseEvent) -> None:
         if self.width() > 0:
             self.seek_requested.emit(max(0.0, min(1.0, event.position().x() / self.width())))
 
@@ -82,6 +81,8 @@ class AudioWorkbench(QWidget):
         self.result = result
         self._mixer: RealtimeMixer | None = None
         self._rows: list[tuple[Waveform, QSlider, QPushButton, QPushButton]] = []
+        self._export_thread: QThread | None = None
+        self._export_worker: ExportWorker | None = None
         self._timer = QTimer(self)
         self._timer.setInterval(40)
         self._timer.timeout.connect(self._update_playhead)
@@ -109,6 +110,9 @@ class AudioWorkbench(QWidget):
         self.apply_pitch_button = QPushButton("Aplicar pitch")
         self.apply_pitch_button.clicked.connect(lambda: self.pitch_requested.emit(self.pitch.value()))
         controls.addWidget(self.apply_pitch_button)
+        self.export_button = QPushButton("Exportar stems")
+        self.export_button.clicked.connect(self._choose_export_directory)
+        controls.addWidget(self.export_button)
         controls.addStretch(1)
         root.addLayout(controls)
         self.position_label = QLabel("00:00 / 00:00")
@@ -123,6 +127,42 @@ class AudioWorkbench(QWidget):
         if self._mixer:
             self._mixer.close()
             self._mixer = None
+
+    @property
+    def export_running(self) -> bool:
+        return self._export_thread is not None
+
+    def _choose_export_directory(self) -> None:
+        destination = QFileDialog.getExistingDirectory(self, "Exportar stems", str(Path.home()))
+        if not destination or self._export_thread is not None:
+            return
+        thread = QThread(self)
+        worker = ExportWorker(self.result, Path(destination))
+        worker.moveToThread(thread)
+        worker.exported.connect(self._export_succeeded)
+        worker.failed.connect(self._export_failed)
+        worker.done.connect(thread.quit)
+        worker.done.connect(worker.deleteLater)
+        thread.started.connect(worker.run)
+        thread.finished.connect(self._export_finished)
+        thread.finished.connect(thread.deleteLater)
+        self._export_thread = thread
+        self._export_worker = worker
+        self.export_button.setEnabled(False)
+        self.export_button.setText("Exportando…")
+        thread.start()
+
+    def _export_succeeded(self, path: str) -> None:
+        QMessageBox.information(self, "Exportación lista", f"Stems exportados en:\n{path}")
+
+    def _export_failed(self, message: str) -> None:
+        QMessageBox.warning(self, "No se pudieron exportar los stems", message)
+
+    def _export_finished(self) -> None:
+        self._export_thread = None
+        self._export_worker = None
+        self.export_button.setEnabled(True)
+        self.export_button.setText("Exportar stems")
 
     def reload_audio(self) -> None:
         if self._mixer:

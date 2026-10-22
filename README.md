@@ -13,6 +13,7 @@ La interfaz se inspira en flujos comunes de estaciones de audio. Separador Vocal
 - Reproduce y pausa las pistas, permite buscar en la canción y ajustar el volumen de cada stem.
 - Los botones **M** (Mute) y **S** (Solo) cambian la mezcla durante la reproducción.
 - Cambia el pitch entre -12 y +12 semitonos con Rubber Band de FFmpeg. El tempo no se modifica y los WAV originales se conservan.
+- Exporta copias WAV de los stems actuales a una carpeta elegida; la copia se realiza en segundo plano.
 - Escribe el registro de los modelos y sus parámetros en la sesión.
 
 La separación de voces es una estimación: doblajes, armonías, reverb y voces de timbre parecido pueden filtrarse entre voz principal y coros. La app no promete aislamiento perfecto.

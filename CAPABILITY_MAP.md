@@ -11,7 +11,7 @@ Crear una aplicación propia para cargar audio, separar la voz principal de los 
 | `audio-ingest` | Seleccionar/importar audio, validar formato y duración, mostrar el estado de cada procesamiento. | — |
 | `vocal-separation` | Separar voz principal, coros y acompañamiento; definir el motor/modelo intercambiable y sus limitaciones de calidad. Es el núcleo del producto. | `audio-ingest` |
 | `audio-workbench` | Escuchar stems sincronizados, formas de onda, búsqueda, solo/silencio/ganancia y transposición con tempo preservado. | `vocal-separation` |
-| `export-library` | Organizar las sesiones y exportar voz principal, coros, acompañamiento o mezcla en formatos acordados. | `audio-workbench` |
+| `export-library` | Organizar las sesiones y exportar copias WAV de los stems a una carpeta elegida. | `audio-workbench` |
 
 ## Orden de construcción propuesto
 
@@ -22,7 +22,7 @@ Crear una aplicación propia para cargar audio, separar la voz principal de los 
 - `audio-ingest`: implementado para WAV, MP3, FLAC y M4A con sesiones locales.
 - `vocal-separation`: implementado en dos pasadas UVR para voz principal estimada, residuo de coros y acompañamiento.
 - `audio-workbench`: reproducción de stems alineados, formas de onda, Mute/Solo, ganancia por pista, búsqueda y pitch offline por semitonos.
-- `export-library`: salidas WAV disponibles en la carpeta de cada sesión; falta una interfaz de exportación de mezcla y formatos seleccionables.
+- `export-library`: exporta los stems actuales a una carpeta elegida, en WAV. Falta exportación de mezcla y formatos seleccionables.
 - Separación independiente de batería, bajo y otros instrumentos: falta integrar un perfil de cuatro stems con licencia de pesos apta para redistribución/uso previsto. El audio-separator acepta arquitecturas Demucs, pero no se habilitan sus pesos de investigación como opción general.
 
 ## Supuestos acordados o propuestos
