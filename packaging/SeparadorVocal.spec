@@ -3,10 +3,14 @@ from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 from pathlib import Path
 import importlib.util
 import sys
+import runpy
 
 project_root = Path(SPECPATH).resolve().parent
+prepare_ffmpeg = runpy.run_path(str(project_root / "packaging" / "prepare_ffmpeg.py"))
+ffmpeg_binaries, ffmpeg_data = prepare_ffmpeg["get_bundle_entries"](project_root)
 
 datas = collect_data_files("vocal_splitter")
+datas += ffmpeg_data
 datas += collect_data_files("audio_separator", includes=["**/*.json", "**/*.yaml"])
 hiddenimports = collect_submodules("audio_separator.separator.architectures")
 hiddenimports += collect_submodules("audio_separator.separator.uvr_lib_v5")
@@ -28,7 +32,7 @@ if not any(Path(source).name == "_C_stable.pyd" for source, _ in torchvision_ext
 a = Analysis(
     [str(project_root / "src" / "vocal_splitter" / "__main__.py")],
     pathex=[str(project_root / "src")],
-    binaries=torchvision_extensions,
+    binaries=torchvision_extensions + ffmpeg_binaries,
     datas=datas,
     hiddenimports=hiddenimports,
     hookspath=[],

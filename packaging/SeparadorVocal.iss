@@ -29,6 +29,9 @@ Name: "desktopicon"; Description: "Crear un acceso directo en el escritorio"; Gr
 Source: "..\dist\SeparadorVocal.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\README.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\docs\third-party-notices.md"; DestDir: "{app}\docs"; Flags: ignoreversion
+Source: "..\build\ffmpeg-runtime\LICENSE"; DestDir: "{app}\docs\ffmpeg"; Flags: ignoreversion
+Source: "..\build\ffmpeg-runtime\README.txt"; DestDir: "{app}\docs\ffmpeg"; Flags: ignoreversion
+Source: "..\build\ffmpeg-runtime\runtime-manifest.json"; DestDir: "{app}\docs\ffmpeg"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\Separador Vocal"; Filename: "{app}\SeparadorVocal.exe"

@@ -10,6 +10,8 @@ if (-not (Test-Path $python)) {
 & $python -m pip install --upgrade pip
 & $python -m pip install -e ".[desktop,separation-cpu]"
 if ($LASTEXITCODE -ne 0) { throw "No se pudieron instalar las dependencias de empaquetado." }
+& $python (Join-Path $PSScriptRoot "prepare_ffmpeg.py")
+if ($LASTEXITCODE -ne 0) { throw "No se pudo preparar FFmpeg/FFprobe verificados; se cancela el empaquetado." }
 & $python -m unittest discover -s tests -v
 if ($LASTEXITCODE -ne 0) { throw "Fallaron las pruebas de escritorio/rutas locales." }
 & $python -m compileall -q src
