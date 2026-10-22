@@ -2,7 +2,7 @@
 from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 from pathlib import Path
 
-project_root = Path(SPECPATH).resolve().parent.parent
+project_root = Path(SPECPATH).resolve().parent
 
 datas = collect_data_files("vocal_splitter")
 datas += collect_data_files("audio_separator", includes=["**/*.json", "**/*.yaml"])
