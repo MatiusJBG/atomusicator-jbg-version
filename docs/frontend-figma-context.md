@@ -35,9 +35,9 @@ Trabajar en ramas desde `develop`, con commits atómicos por responsabilidad. Se
 
 ## Estado de la referencia visual
 
-El enlace de Figma muestra «¿Desea consultar este archivo? Regístrese o Inicie sesión» en el navegador. No se han podido inspeccionar los dashboards, sus interacciones, colores, tipografías ni recursos. Por ello este documento no atribuye al prototipo decisiones visuales no observadas.
+El primer enlace mostraba «¿Desea consultar este archivo? Regístrese o Inicie sesión». El usuario facilitó después un enlace al nodo `3:13060` que sí permitió consultar el prototipo y su editor. Se inspeccionaron las tres pantallas: mezclador DAW, exportación de stems y aplicación de pitch en curso. El inventario visual y los criterios de implementación están en `docs/frontend-figma-design.md`.
 
-Antes de implementar la réplica se necesita acceso al archivo mediante una sesión autorizada de Figma, un enlace consultable o una exportación de las pantallas. Tras obtenerlo, registrar el inventario de pantallas y estados, tokens visuales, correspondencia con los controles Qt y criterios de comparación visual. Adaptar las funciones de la referencia al producto local sin añadir servicios ficticios.
+La implementación adapta los controles de la referencia al producto local, con datos reales del audio importado y sin añadir servicios ficticios.
 
 ## Secuencia de implementación
 
