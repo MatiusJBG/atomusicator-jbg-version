@@ -3,13 +3,12 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import tempfile
 import unittest
-from unittest.mock import patch
 from pathlib import Path
 
 import numpy as np
 import soundfile as sf
 from PySide6.QtWidgets import QApplication
-from PySide6.QtGui import QFontDatabase, QCloseEvent
+from PySide6.QtGui import QFontDatabase
 
 from vocal_splitter.domain.separation_result import SeparationResult
 from vocal_splitter.domain.stem import Stem, StemKind
@@ -102,3 +101,10 @@ class WorkbenchUiTests(unittest.TestCase):
         self.assertTrue(self.workbench.play_button.isEnabled())
         self.assertTrue(self.workbench.export_button.isEnabled())
 
+    def test_pitch_value_remains_readable_after_layout(self):
+        self.workbench.resize(800, 600)
+        self.workbench.show()
+        self.app.processEvents()
+        self.assertGreater(self.workbench.pitch.lineEdit().width(), 60)
+        self.assertIn("0", self.workbench.pitch.text())
+        self.workbench.close()

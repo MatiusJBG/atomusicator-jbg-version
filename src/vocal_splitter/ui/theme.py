@@ -45,6 +45,7 @@ QSlider::groove:horizontal { height: 3px; background: #293642; border: 0; }
 QSlider::sub-page:horizontal { background: #2DD4BF; }
 QSlider::handle:horizontal { width: 8px; background: #D7E1E9; margin: -4px 0; border-radius: 2px; }
 QSpinBox, QComboBox, QLineEdit { color: #DCE6ED; background: #101820; border: 1px solid #293E4C; border-radius: 4px; padding: 6px; }
+QSpinBox::up-button, QSpinBox::down-button { width: 0; height: 0; border: 0; }
 QComboBox QAbstractItemView { background: #18232D; color: #E5EDF3; selection-background-color: #23564E; }
 QCheckBox { color: #9BAAB8; spacing: 6px; }
 QCheckBox::indicator { width: 13px; height: 13px; border: 1px solid #49606E; border-radius: 3px; background: #101820; }

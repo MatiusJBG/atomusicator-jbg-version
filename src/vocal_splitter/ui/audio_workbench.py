@@ -5,7 +5,7 @@ from pathlib import Path
 from PySide6.QtCore import QThread, Qt, QTimer, Signal
 from PySide6.QtGui import QShortcut, QKeySequence
 from PySide6.QtWidgets import (
-    QAbstractSpinBox, QDialog, QFrame, QHBoxLayout, QMessageBox, QPushButton,
+    QDialog, QFrame, QHBoxLayout, QMessageBox, QPushButton,
     QProgressBar, QScrollArea, QSlider, QSpinBox, QVBoxLayout, QWidget,
 )
 
@@ -87,6 +87,7 @@ class AudioWorkbench(QWidget):
         buttons = QHBoxLayout()
         restart = QPushButton("|◀")
         restart.setObjectName("transportButton")
+        restart.setFixedWidth(20)
         restart.setAccessibleName("Volver al inicio")
         restart.setToolTip("Volver al inicio")
         restart.clicked.connect(lambda: self._seek(0))
@@ -100,10 +101,12 @@ class AudioWorkbench(QWidget):
         buttons.addWidget(self.play_button)
         stop = QPushButton("■")
         stop.setObjectName("transportButton")
+        stop.setFixedWidth(20)
         stop.setAccessibleName("Detener")
         stop.clicked.connect(self.stop)
         buttons.addWidget(stop)
         self.position_label = label("00:00 / 00:00", "transportTime")
+        self.position_label.setMinimumWidth(108)
         buttons.addWidget(self.position_label)
         controls.addLayout(buttons)
         controls.addWidget(label("Espacio: reproducir / pausar", "gainValue"))
@@ -126,7 +129,6 @@ class AudioWorkbench(QWidget):
         minus.setAccessibleName("Bajar un semitono")
         pitch_steps.addWidget(minus)
         self.pitch = QSpinBox()
-        self.pitch.setButtonSymbols(QAbstractSpinBox.ButtonSymbols.NoButtons)
         self.pitch.setRange(-12, 12)
         self.pitch.setPrefix("Pitch: ")
         self.pitch.setSuffix(" st")
