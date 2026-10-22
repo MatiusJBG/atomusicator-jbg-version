@@ -16,15 +16,15 @@ class SeparationEngineUnavailableError(SeparationError):
     user_message = (
         'Falta el motor local de separación. Instálalo con '
         'python -m pip install -e ".[separation-cpu]" y vuelve a intentarlo. '
-        "También necesitas instalar FFmpeg y dejar ffmpeg.exe disponible en PATH."
+        "La distribución de escritorio debe incluir sus componentes de audio."
     )
 
 
 class SeparationFfmpegUnavailableError(SeparationError):
     code = "ffmpeg_unavailable"
     user_message = (
-        "No se encontró FFmpeg. Instala una compilación de FFmpeg y agrega "
-        "su carpeta a PATH; la aplicación no incluye ese binario."
+        "Faltan los componentes de audio de esta instalación (FFmpeg/FFprobe). "
+        "Reinstala la aplicación desde su instalador completo."
     )
 
     def __init__(self, user_message: str | None = None) -> None:

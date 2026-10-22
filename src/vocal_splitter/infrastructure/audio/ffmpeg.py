@@ -1,11 +1,33 @@
-"""Localiza FFmpeg en PATH o en los enlaces de WinGet del usuario."""
+"""Resuelve las herramientas incluidas; usa el sistema solo en desarrollo."""
 
 import os
+import sys
 from pathlib import Path
 from shutil import which
 
 
+def bundled_tools_directory() -> Path:
+    if getattr(sys, "frozen", False):
+        root = Path(getattr(sys, "_MEIPASS", Path(sys.executable).parent))
+        return root / "runtime" / "ffmpeg" / "bin"
+    return Path(__file__).resolve().parents[4] / "build" / "ffmpeg-runtime" / "bin"
+
+
+def _bundled_tool(name: str) -> str | None:
+    directory = bundled_tools_directory()
+    if all((directory / tool).is_file() for tool in ("ffmpeg.exe", "ffprobe.exe")):
+        return str(directory / name)
+    return None
+
+
 def find_ffmpeg() -> str | None:
+    bundled = _bundled_tool("ffmpeg.exe")
+    if bundled:
+        return bundled
+    # A frozen package must work on its own. Falling back to the build host
+    # would conceal a broken distribution until it reaches another computer.
+    if getattr(sys, "frozen", False) or bundled_tools_directory().exists():
+        return None
     if os.name == "nt":
         candidate = Path.home() / "AppData/Local/Microsoft/WinGet/Links/ffmpeg.exe"
         try:
@@ -31,6 +53,24 @@ def find_ffmpeg() -> str | None:
         except OSError:
             return None
     return None
+
+
+def find_ffprobe() -> str | None:
+    bundled = _bundled_tool("ffprobe.exe")
+    if bundled:
+        return bundled
+    if getattr(sys, "frozen", False) or bundled_tools_directory().exists():
+        return None
+    executable = find_ffmpeg()
+    if executable:
+        sibling = Path(executable).with_name("ffprobe.exe" if os.name == "nt" else "ffprobe")
+        if sibling.is_file():
+            return str(sibling)
+    try:
+        found = which("ffprobe")
+    except OSError:
+        return None
+    return _resolved_link_target(found) if found else None
 
 
 def _resolved_link_target(executable: str, target: str | None = None) -> str:
