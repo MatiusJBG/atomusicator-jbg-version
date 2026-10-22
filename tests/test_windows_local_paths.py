@@ -25,6 +25,7 @@ class WindowsLocalPathsTests(unittest.TestCase):
             target.touch()
 
             with (
+                patch.object(ffmpeg, "bundled_tools_directory", return_value=root / "absent-runtime"),
                 patch.object(ffmpeg, "which", side_effect=OSError(448, "untrusted mount point")),
                 patch.object(ffmpeg.os, "readlink", return_value=str(target)),
                 patch.object(Path, "home", return_value=home),
