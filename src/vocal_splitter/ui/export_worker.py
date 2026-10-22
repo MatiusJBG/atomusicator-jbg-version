@@ -15,6 +15,8 @@ from vocal_splitter.domain.stem import StemKind
 _FILENAMES = {
     StemKind.LEAD_VOCAL: "voz_principal.wav",
     StemKind.BACKING_VOCALS: "coros.wav",
+    StemKind.DRUMS: "bateria.wav",
+    StemKind.BASS: "bajo.wav",
     StemKind.INSTRUMENTAL: "acompanamiento.wav",
     StemKind.VOCAL_MIX: "voz_total.wav",
 }
