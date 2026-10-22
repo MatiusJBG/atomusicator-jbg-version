@@ -2,11 +2,11 @@
 
 ## Ultimate Vocal Remover (UVR) y modelos
 
-La aplicación ofrece `UVR_MDXNET_Main.onnx` y `UVR_MDXNET_KARA_2.onnx` bajo demanda, desde el catálogo público de UVR. El [README oficial de UVR](https://github.com/Anjok07/ultimatevocalremovergui#license) pide a las aplicaciones terceras que respeten MIT y den crédito a UVR, Anjok07 y aufr33; el catálogo identifica ambos archivos. El repositorio indica que sus desarrolladores entrenaron los modelos que provee salvo Demucs v3/v4.
+La aplicación descarga bajo demanda `UVR_MDXNET_Main.onnx`, `UVR_MDXNET_KARA_2.onnx`, `kuielab_a_drums.onnx` y `kuielab_a_bass.onnx` desde los enlaces del catálogo público de UVR. Su README declara el código MIT, solicita a aplicaciones terceras respetar MIT y dar crédito a UVR y sus desarrolladores; también indica que sus desarrolladores entrenaron los modelos que provee salvo Demucs v3/v4. Los modelos Kuielab aparecen en el catálogo oficial y el proyecto upstream MDX-Net publica su código bajo MIT.
 
-UVR no adjunta un archivo de licencia individual a cada uno de esos dos pesos. Por eso, esta atribución refleja la solicitud publicada por UVR y no una revisión legal independiente de sus datos de entrenamiento o una autorización específica de redistribución comercial. Los pesos no se incluyen en el instalador ni en Git. Quien vaya a distribuir el programa con fines comerciales debe revisar el estado actual directamente con los titulares de derechos.
+UVR no adjunta un archivo de licencia individual a cada peso. Esta atribución sigue la solicitud de UVR y la licencia upstream MDX-Net; no constituye una auditoría legal independiente de datos de entrenamiento. Los pesos se descargan directamente bajo demanda, no se incluyen en el instalador ni en Git y se validan con SHA-256 antes de inferencia.
 
-**Crédito solicitado por UVR:** Ultimate Vocal Remover (UVR), Anjok07 y aufr33.
+**Crédito:** Ultimate Vocal Remover (UVR), Anjok07 y aufr33; KINoAI/Kuielab y Woosung Choi por MDX-Net.
 
 Los pesos no se incluyen en el repositorio ni en el paquete de la aplicación. El [manifiesto local de modelos](../src/vocal_splitter/infrastructure/separation/model_license_manifest.json) guarda sus URLs, licencia, fuente de la suma SHA-256 y el checksum esperado; el programa verifica el archivo descargado contra ese checksum antes de la inferencia.
 

@@ -10,7 +10,9 @@ from PySide6.QtCore import QCoreApplication, QStandardPaths, QTimer
 from PySide6.QtWidgets import QApplication
 
 from vocal_splitter.application.project_settings import ProjectSettings
-from vocal_splitter.domain.stem import StemKind
+from vocal_splitter.application.separate_vocals import SeparateVocals
+from vocal_splitter.infrastructure.audio.metadata_reader import MetadataReader
+from vocal_splitter.infrastructure.projects.session_store import SessionStore
 from vocal_splitter.infrastructure.separation.audio_separator_engine import (
     AudioSeparatorEngine,
 )
@@ -136,34 +138,17 @@ def _run_separation_diagnostics() -> int:
             source = root / "diagnostic-mix.wav"
             sf.write(source, mixture, sample_rate, subtype="PCM_16")
 
-            first = engine.separate_voice_and_instrumental(
-                source,
-                root / "stage-one",
+            asset = MetadataReader().read(source)
+            session = SessionStore().create(asset, root / "sessions")
+            result = SeparateVocals(engine).execute(
+                session,
                 progress=lambda *_: None,
                 cancellation=cancellation,
             )
-            expected_first = {StemKind.VOCAL_MIX, StemKind.INSTRUMENTAL}
-            if {stem.kind for stem in first.stems} != expected_first:
-                raise RuntimeError("La etapa 1 no produjo voz total y acompañamiento.")
-
-            vocal_mix = first.stem(StemKind.VOCAL_MIX)
-            second = engine.separate_lead_and_backing(
-                vocal_mix,
-                root / "stage-two",
-                progress=lambda *_: None,
-                cancellation=cancellation,
-            )
-            instrumental = first.stem(StemKind.INSTRUMENTAL)
-            result_stems = (instrumental, *second.stems)
-            expected = {
-                StemKind.LEAD_VOCAL,
-                StemKind.BACKING_VOCALS,
-                StemKind.INSTRUMENTAL,
-            }
-            if {stem.kind for stem in result_stems} != expected:
-                raise RuntimeError("La etapa 2 no produjo voz principal, coros e instrumental.")
+            if not result.is_final or len(result.stems) != 5:
+                raise RuntimeError("La separación no produjo exactamente cinco stems finales.")
             expected_duration = sf.info(source).duration
-            for stem in result_stems:
+            for stem in result.stems:
                 info = sf.info(stem.path)
                 if info.frames == 0 or info.samplerate <= 0 or info.channels <= 0:
                     raise RuntimeError(f"El stem {stem.kind.value} está vacío o no es legible.")
@@ -181,7 +166,7 @@ def _run_separation_diagnostics() -> int:
                     info.channels,
                 )
 
-        logger.info("Separation self-test passed; stems=3; stages=2")
+        logger.info("Separation self-test passed; stems=5; stages=4")
         return 0
     except Exception:
         logger.exception("Separation self-test failed")

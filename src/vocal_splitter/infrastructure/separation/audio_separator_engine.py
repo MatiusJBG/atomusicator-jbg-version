@@ -41,9 +41,15 @@ logger = logging.getLogger(__name__)
 
 _STAGE_ONE_PROFILE = "uvr-mdxnet-main-v1"
 _STAGE_TWO_PROFILE = "uvr-mdxnet-kara-2-v1"
+_DRUMS_PROFILE = "kuielab-mdxnet-drums-v1"
+_BASS_PROFILE = "kuielab-mdxnet-bass-v1"
 _MAX_MODEL_BYTES = 512 * 1024 * 1024
 _DOWNLOAD_CHUNK_BYTES = 1024 * 1024
-_MDX_SEGMENT_SIZE = 256
+_DEFAULT_MDX_SEGMENT_SIZE = 256
+_MDX_SEGMENT_SIZE_BY_PROFILE = {
+    _DRUMS_PROFILE: 512,
+    _BASS_PROFILE: 512,
+}
 _MDX_OVERLAP = 0.35
 
 
@@ -59,7 +65,7 @@ def disable_mdx_progress_output(mdx_module=None) -> None:
 
 
 class AudioSeparatorEngine:
-    """Ejecuta el flujo de dos etapas y verifica los pesos antes de cargarlos."""
+    """Ejecuta y verifica las cuatro pasadas locales de separación."""
 
     def __init__(
         self,
@@ -116,6 +122,48 @@ class AudioSeparatorEngine:
             cancellation=cancellation,
         )
 
+    def separate_drums_and_residual(
+        self,
+        instrumental_stem: Stem,
+        output_dir: Path,
+        *,
+        progress: ProgressCallback,
+        cancellation: CancellationToken,
+    ) -> SeparationResult:
+        return self._separate(
+            instrumental_stem.path,
+            output_dir,
+            profile_id=_DRUMS_PROFILE,
+            stage=SeparationStage.DRUMS_AND_REMAINDER,
+            outputs={
+                "Drums": ("bateria", StemKind.DRUMS),
+                "No Drums": ("sin_bateria", StemKind.INSTRUMENTAL),
+            },
+            progress=progress,
+            cancellation=cancellation,
+        )
+
+    def separate_bass_and_instrumental(
+        self,
+        instrumental_stem: Stem,
+        output_dir: Path,
+        *,
+        progress: ProgressCallback,
+        cancellation: CancellationToken,
+    ) -> SeparationResult:
+        return self._separate(
+            instrumental_stem.path,
+            output_dir,
+            profile_id=_BASS_PROFILE,
+            stage=SeparationStage.BASS_AND_INSTRUMENTAL,
+            outputs={
+                "Bass": ("bajo", StemKind.BASS),
+                "No Bass": ("instrumental", StemKind.INSTRUMENTAL),
+            },
+            progress=progress,
+            cancellation=cancellation,
+        )
+
     def _separate(
         self,
         source: Path,
@@ -156,7 +204,9 @@ class AudioSeparatorEngine:
                 log_level=logging.WARNING,
                 mdx_params={
                     "hop_length": 1024,
-                    "segment_size": _MDX_SEGMENT_SIZE,
+                    "segment_size": _MDX_SEGMENT_SIZE_BY_PROFILE.get(
+                        profile_id, _DEFAULT_MDX_SEGMENT_SIZE
+                    ),
                     "overlap": _MDX_OVERLAP,
                     "batch_size": 1,
                     "enable_denoise": False,
@@ -198,7 +248,10 @@ class AudioSeparatorEngine:
             ("model_filename", profile.filename),
             ("outputs", ",".join(f"{label}:{filename}" for label, filename in output_names.items())),
             ("device", "auto (selección de audio-separator)"),
-            ("mdx_segment_size", str(_MDX_SEGMENT_SIZE)),
+            (
+                "mdx_segment_size",
+                str(_MDX_SEGMENT_SIZE_BY_PROFILE.get(profile_id, _DEFAULT_MDX_SEGMENT_SIZE)),
+            ),
             ("mdx_overlap", str(_MDX_OVERLAP)),
             ("mdx_batch_size", "1"),
         )

@@ -1,4 +1,4 @@
-"""Orquestación de la separación local en dos etapas."""
+"""Orquestación de la separación local en cinco stems finales."""
 
 import json
 import logging
@@ -59,6 +59,8 @@ class SeparateVocals:
         job_dir = processing_root / job_id
         stage_one_dir = job_dir / "stage-one"
         stage_two_dir = job_dir / "stage-two"
+        stage_three_dir = job_dir / "stage-three"
+        stage_four_dir = job_dir / "stage-four"
         publish_dir = job_dir / "publish"
         try:
             processing_root.mkdir(exist_ok=True)
@@ -66,6 +68,8 @@ class SeparateVocals:
             job_dir.mkdir()
             stage_one_dir.mkdir()
             stage_two_dir.mkdir()
+            stage_three_dir.mkdir()
+            stage_four_dir.mkdir()
             publish_dir.mkdir()
         except OSError as error:
             logger.exception("Could not create separation directories in %s", session_dir)
@@ -77,7 +81,7 @@ class SeparateVocals:
             first_stage = self._separator.separate_voice_and_instrumental(
                 source,
                 stage_one_dir,
-                progress=self._map_progress(progress, 8, 41),
+                progress=self._map_progress(progress, 5, 25),
                 cancellation=cancellation,
             )
             self._require_kinds(first_stage, {StemKind.VOCAL_MIX, StemKind.INSTRUMENTAL})
@@ -87,7 +91,7 @@ class SeparateVocals:
                 second_stage = self._separator.separate_lead_and_backing(
                     vocal_mix,
                     stage_two_dir,
-                    progress=self._map_progress(progress, 50, 82),
+                    progress=self._map_progress(progress, 28, 48),
                     cancellation=cancellation,
                 )
                 self._require_kinds(
@@ -113,19 +117,79 @@ class SeparateVocals:
                     )
                 raise PartialSeparationError(message, partial_result) from error
 
-            instrumental_only = SeparationResult(
-                (first_stage.stem(StemKind.INSTRUMENTAL),),
-                first_stage.engine_usage,
+            vocals_only = SeparationResult(
+                second_stage.stems,
+                self._combined_engine_usage(first_stage, second_stage),
             )
-            complete = instrumental_only.combine(second_stage)
+            try:
+                drums_stage = self._separator.separate_drums_and_residual(
+                    first_stage.stem(StemKind.INSTRUMENTAL),
+                    stage_three_dir,
+                    progress=self._map_progress(progress, 51, 72),
+                    cancellation=cancellation,
+                )
+                self._require_kinds(drums_stage, {StemKind.DRUMS, StemKind.INSTRUMENTAL})
+            except SeparationCancelledError:
+                raise
+            except Exception as error:
+                partial = SeparationResult(
+                    (*vocals_only.stems, first_stage.stem(StemKind.INSTRUMENTAL)),
+                    vocals_only.engine_usage,
+                )
+                self._raise_partial_failure(
+                    session,
+                    job_id,
+                    partial,
+                    outputs_root,
+                    job_dir,
+                    error,
+                    "No se pudo separar la batería. Se conservaron las voces y el acompañamiento como resultados parciales.",
+                )
+
+            try:
+                bass_stage = self._separator.separate_bass_and_instrumental(
+                    drums_stage.stem(StemKind.INSTRUMENTAL),
+                    stage_four_dir,
+                    progress=self._map_progress(progress, 74, 94),
+                    cancellation=cancellation,
+                )
+                self._require_kinds(bass_stage, {StemKind.BASS, StemKind.INSTRUMENTAL})
+            except SeparationCancelledError:
+                raise
+            except Exception as error:
+                partial = vocals_only.combine(drums_stage)
+                self._raise_partial_failure(
+                    session,
+                    job_id,
+                    partial,
+                    outputs_root,
+                    job_dir,
+                    error,
+                    "No se pudo separar el bajo. Se conservaron las voces, la batería y el resto instrumental como resultados parciales.",
+                )
+
+            complete = SeparationResult(
+                (
+                    second_stage.stem(StemKind.LEAD_VOCAL),
+                    second_stage.stem(StemKind.BACKING_VOCALS),
+                    drums_stage.stem(StemKind.DRUMS),
+                    bass_stage.stem(StemKind.BASS),
+                    bass_stage.stem(StemKind.INSTRUMENTAL),
+                ),
+                self._combined_engine_usage(
+                    first_stage, second_stage, drums_stage, bass_stage
+                ),
+            )
             if not complete.is_final:
-                raise SeparationOutputError("El motor no entregó los tres stems finales")
+                raise SeparationOutputError("El motor no entregó los cinco stems finales")
             cancellation.raise_if_cancelled()
             progress(SeparationStage.FINALIZING, 90, "Guardando pistas alineadas…")
             final_names = {
                 StemKind.LEAD_VOCAL: "voz_principal.wav",
                 StemKind.BACKING_VOCALS: "coros.wav",
-                StemKind.INSTRUMENTAL: "acompanamiento.wav",
+                StemKind.DRUMS: "bateria.wav",
+                StemKind.BASS: "bajo.wav",
+                StemKind.INSTRUMENTAL: "instrumental.wav",
             }
             published_stems: list[Stem] = []
             for kind, name in final_names.items():
@@ -173,8 +237,8 @@ class SeparateVocals:
     def _check_free_space(session: AudioSession) -> None:
         asset = session.asset
         estimated_bytes = int(
-            asset.duration_seconds * asset.sample_rate_hz * asset.channels * 4 * 5
-            + 128 * 1024 * 1024
+            asset.duration_seconds * asset.sample_rate_hz * asset.channels * 4 * 10
+            + 256 * 1024 * 1024
         )
         try:
             available = shutil.disk_usage(session.directory).free
@@ -234,7 +298,11 @@ class SeparateVocals:
         partial_dir.mkdir()
         names = {
             StemKind.VOCAL_MIX: "voz_total.wav",
-            StemKind.INSTRUMENTAL: "acompanamiento.wav",
+            StemKind.LEAD_VOCAL: "voz_principal.wav",
+            StemKind.BACKING_VOCALS: "coros.wav",
+            StemKind.DRUMS: "bateria.wav",
+            StemKind.BASS: "bajo.wav",
+            StemKind.INSTRUMENTAL: "acompanamiento_parcial.wav",
         }
         moved: list[Stem] = []
         for stem in result.stems:
@@ -252,6 +320,27 @@ class SeparateVocals:
             raise
         shutil.rmtree(job_dir, ignore_errors=True)
         return partial_result
+
+    def _raise_partial_failure(
+        self,
+        session: AudioSession,
+        job_id: str,
+        partial: SeparationResult,
+        outputs_root: Path,
+        job_dir: Path,
+        error: Exception,
+        message: str,
+    ) -> None:
+        if isinstance(error, SeparationError):
+            message = f"{error.user_message} {message}"
+        else:
+            logger.exception("Separation stage failed", exc_info=error)
+        saved = self._publish_partial(
+            session, job_id, partial, outputs_root, job_dir
+        )
+        raise PartialSeparationError(
+            f"{message} Se guardaron en {saved.stems[0].path.parent}.", saved
+        ) from error
 
     @staticmethod
     def _record(
@@ -297,3 +386,15 @@ class SeparateVocals:
                 else None
             ),
         }
+
+    @staticmethod
+    def _combined_engine_usage(*results: SeparationResult):
+        usages = [result.engine_usage for result in results if result.engine_usage]
+        if not usages:
+            return None
+        unique_models = {
+            model.profile_id: model
+            for usage in usages
+            for model in usage.models
+        }
+        return replace(usages[0], models=tuple(unique_models.values()))
