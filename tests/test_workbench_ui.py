@@ -108,3 +108,17 @@ class WorkbenchUiTests(unittest.TestCase):
         self.assertGreater(self.workbench.pitch.lineEdit().width(), 60)
         self.assertIn("0", self.workbench.pitch.text())
         self.workbench.close()
+
+    def test_zoom_keeps_ruler_and_waveforms_in_shared_scroll_content(self):
+        self.workbench.resize(1100, 650)
+        self.workbench.show()
+        self.app.processEvents()
+        self.workbench.zoom.setValue(200)
+        self.app.processEvents()
+        self.assertGreater(self.workbench.track_content.width(),
+                           self.workbench.track_scroll.viewport().width())
+        self.assertGreater(self.workbench.track_scroll.horizontalScrollBar().maximum(), 0)
+        self.workbench.zoom.setValue(100)
+        self.app.processEvents()
+        self.assertEqual(self.workbench.track_scroll.horizontalScrollBar().maximum(), 0)
+        self.workbench.close()

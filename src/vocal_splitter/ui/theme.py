@@ -57,6 +57,10 @@ QScrollBar:vertical { width: 7px; background: #10171F; margin: 0; }
 QScrollBar::handle:vertical { background: #394A59; min-height: 24px; border-radius: 3px; }
 QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
 QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: transparent; }
+QScrollBar:horizontal { height: 7px; background: #10171F; margin: 0; }
+QScrollBar::handle:horizontal { background: #394A59; min-width: 24px; border-radius: 3px; }
+QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0; }
+QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal { background: transparent; }
 QMenuBar, QMenu, QStatusBar { background: #0F161E; color: #8A9AA8; font-size: 10px; }
 QMenuBar::item:selected, QMenu::item:selected { background: #233A3C; }
 QPushButton#formatCard { text-align: left; min-height: 44px; padding: 10px; }
