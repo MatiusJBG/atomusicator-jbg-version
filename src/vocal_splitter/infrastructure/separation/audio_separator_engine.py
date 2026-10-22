@@ -5,6 +5,7 @@ import logging
 import os
 import subprocess
 import time
+from functools import partial
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from urllib.error import HTTPError, URLError
@@ -44,6 +45,17 @@ _MAX_MODEL_BYTES = 512 * 1024 * 1024
 _DOWNLOAD_CHUNK_BYTES = 1024 * 1024
 _MDX_SEGMENT_SIZE = 256
 _MDX_OVERLAP = 0.35
+
+
+def disable_mdx_progress_output(mdx_module=None) -> None:
+    """Disable tqdm's console bar, which can fail in a windowed Windows app."""
+    if mdx_module is None:
+        from audio_separator.separator.architectures import mdx_separator as mdx_module
+
+    if not getattr(mdx_module.tqdm, "_vocal_splitter_quiet", False):
+        quiet_tqdm = partial(mdx_module.tqdm, disable=True)
+        quiet_tqdm._vocal_splitter_quiet = True
+        mdx_module.tqdm = quiet_tqdm
 
 
 class AudioSeparatorEngine:
@@ -151,6 +163,7 @@ class AudioSeparatorEngine:
                 },
             )
             separator.load_model(model_filename=profile.filename)
+            disable_mdx_progress_output()
             cancellation.raise_if_cancelled()
             progress(stage, 12, "Separando audio localmente…")
             output_files = separator.separate(str(source), output_names)
@@ -158,7 +171,18 @@ class AudioSeparatorEngine:
             raise
         except Exception as error:
             logger.exception("Local separation failed for profile %s", profile.profile_id)
-            raise SeparationOutputError() from error
+            if "torchvision::nms" in str(error):
+                message = (
+                    "La instalación del motor de audio está incompleta: TorchVision no pudo "
+                    "cargar su extensión nativa necesaria para procesar el modelo. "
+                    "Instala una compilación actualizada de Separador Vocal."
+                )
+            else:
+                message = (
+                    f"Falló el modelo {profile.profile_id} "
+                    f"({type(error).__name__}: {error}). Consulta el registro local y vuelve a intentarlo."
+                )
+            raise SeparationOutputError(message) from error
 
         cancellation.raise_if_cancelled()
         stems = self._map_outputs(output_files, output_dir, outputs)

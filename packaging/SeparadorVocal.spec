@@ -1,6 +1,7 @@
 # PyInstaller build configuration. Model weights and user audio are never bundled.
 from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 from pathlib import Path
+import importlib.util
 import sys
 
 project_root = Path(SPECPATH).resolve().parent
@@ -11,10 +12,23 @@ hiddenimports = collect_submodules("audio_separator.separator.architectures")
 hiddenimports += collect_submodules("audio_separator.separator.uvr_lib_v5")
 hiddenimports += collect_submodules("audio_separator.separator.roformer")
 
+torchvision_spec = importlib.util.find_spec("torchvision")
+if torchvision_spec is None or not torchvision_spec.submodule_search_locations:
+    raise RuntimeError("No se encontró el paquete torchvision del entorno de compilación.")
+torchvision_package = Path(next(iter(torchvision_spec.submodule_search_locations)))
+torchvision_extensions = [
+    (str(extension), "torchvision")
+    for extension in torchvision_package.glob("*.pyd")
+]
+if not any(Path(source).name == "_C_stable.pyd" for source, _ in torchvision_extensions):
+    raise RuntimeError(
+        "torchvision/_C_stable.pyd no está instalado; no se puede compilar una app funcional."
+    )
+
 a = Analysis(
     [str(project_root / "src" / "vocal_splitter" / "__main__.py")],
     pathex=[str(project_root / "src")],
-    binaries=[],
+    binaries=torchvision_extensions,
     datas=datas,
     hiddenimports=hiddenimports,
     hookspath=[],

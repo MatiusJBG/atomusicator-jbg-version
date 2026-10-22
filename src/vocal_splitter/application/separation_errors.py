@@ -55,6 +55,11 @@ class SeparationOutputError(SeparationError):
     code = "invalid_output"
     user_message = "El motor no produjo todas las pistas de audio esperadas."
 
+    def __init__(self, user_message: str | None = None) -> None:
+        if user_message is not None:
+            self.user_message = user_message
+        super().__init__(self.user_message)
+
 
 class SeparationStorageError(SeparationError):
     code = "storage_error"
