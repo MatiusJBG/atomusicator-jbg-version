@@ -9,8 +9,8 @@ import soundfile as sf
 from PySide6.QtCore import QThread, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QMouseEvent, QPainter, QPen
 from PySide6.QtWidgets import (
-    QFileDialog, QFrame, QHBoxLayout, QLabel, QMessageBox, QPushButton, QSlider,
-    QSpinBox, QVBoxLayout, QWidget,
+    QFileDialog, QFrame, QHBoxLayout, QLabel, QMessageBox, QPushButton, QScrollArea,
+    QSlider, QSpinBox, QVBoxLayout, QWidget,
 )
 
 from vocal_splitter.domain.separation_result import SeparationResult
@@ -22,20 +22,32 @@ from vocal_splitter.ui.export_worker import ExportWorker
 _NAMES = {
     StemKind.LEAD_VOCAL: "Voz principal",
     StemKind.BACKING_VOCALS: "Coros",
-    StemKind.INSTRUMENTAL: "Acompañamiento",
+    StemKind.DRUMS: "Batería",
+    StemKind.BASS: "Bajo",
+    StemKind.INSTRUMENTAL: "Instrumental",
     StemKind.VOCAL_MIX: "Voces (total)",
+}
+
+_TRACK_COLORS = {
+    StemKind.LEAD_VOCAL: "#55cfc0",
+    StemKind.BACKING_VOCALS: "#a895e8",
+    StemKind.DRUMS: "#e5b35b",
+    StemKind.BASS: "#75b9e4",
+    StemKind.INSTRUMENTAL: "#a7b9ae",
+    StemKind.VOCAL_MIX: "#9baab0",
 }
 
 
 class Waveform(QWidget):
     seek_requested = Signal(float)
 
-    def __init__(self, path: Path) -> None:
+    def __init__(self, path: Path, color: str = "#55cfc0") -> None:
         super().__init__()
-        self.setMinimumHeight(68)
+        self.setMinimumHeight(48)
         self.setMinimumWidth(220)
         self._peaks = self._read_peaks(path)
         self._playhead = 0.0
+        self._color = QColor(color)
 
     @staticmethod
     def _read_peaks(path: Path) -> np.ndarray:
@@ -59,7 +71,7 @@ class Waveform(QWidget):
         painter.fillRect(self.rect(), QColor("#101923"))
         if len(self._peaks):
             mid = self.height() / 2
-            painter.setPen(QPen(QColor("#13bfd2"), 1))
+            painter.setPen(QPen(self._color, 1))
             for index, peak in enumerate(self._peaks):
                 amplitude = max(1.0, peak * (self.height() * 0.46))
                 x = index * self.width() / len(self._peaks)
@@ -78,9 +90,10 @@ class AudioWorkbench(QWidget):
 
     def __init__(self, result: SeparationResult, parent: QWidget | None = None) -> None:
         super().__init__(parent)
+        self.setObjectName("audioWorkbench")
         self.result = result
         self._mixer: RealtimeMixer | None = None
-        self._rows: list[tuple[Waveform, QSlider, QPushButton, QPushButton]] = []
+        self._rows: list[tuple[Waveform, QSlider, QPushButton, QPushButton, QLabel]] = []
         self._export_thread: QThread | None = None
         self._export_worker: ExportWorker | None = None
         self._timer = QTimer(self)
@@ -91,32 +104,68 @@ class AudioWorkbench(QWidget):
 
     def _build(self) -> None:
         root = QVBoxLayout(self)
-        root.setContentsMargins(8, 8, 8, 8)
+        root.setContentsMargins(0, 12, 0, 0)
+        root.setSpacing(12)
+        heading = QHBoxLayout()
+        title_stack = QVBoxLayout()
         title = QLabel("Mezclador de stems")
-        title.setStyleSheet("font-size: 18px; font-weight: 650; color: #edf3f5")
-        root.addWidget(title)
-        self.track_container = QVBoxLayout()
+        title.setObjectName("workbenchTitle")
+        helper = QLabel("Ajusta cada pista en tiempo real. Las cinco comparten el mismo cursor.")
+        helper.setObjectName("workbenchHint")
+        title_stack.addWidget(title)
+        title_stack.addWidget(helper)
+        heading.addLayout(title_stack)
+        heading.addStretch(1)
+        self.stem_count = QLabel("5 PISTAS")
+        self.stem_count.setObjectName("stemCount")
+        heading.addWidget(self.stem_count, 0, Qt.AlignmentFlag.AlignVCenter)
+        root.addLayout(heading)
+
+        track_scroll = QScrollArea()
+        track_scroll.setObjectName("trackScroll")
+        track_scroll.setWidgetResizable(True)
+        track_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        track_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        track_content = QWidget()
+        track_content.setObjectName("trackContent")
+        self.track_container = QVBoxLayout(track_content)
+        self.track_container.setContentsMargins(1, 1, 8, 1)
         self.track_container.setSpacing(8)
-        root.addLayout(self.track_container)
-        controls = QHBoxLayout()
-        self.play_button = QPushButton("▶ Reproducir")
+        track_scroll.setWidget(track_content)
+        root.addWidget(track_scroll, 1)
+
+        transport = QFrame()
+        transport.setObjectName("transportPanel")
+        controls = QHBoxLayout(transport)
+        controls.setContentsMargins(14, 10, 14, 10)
+        self.play_button = QPushButton("▶")
+        self.play_button.setObjectName("playButton")
+        self.play_button.setAccessibleName("Reproducir")
+        self.play_button.setFixedSize(46, 42)
         self.play_button.clicked.connect(self._toggle_playback)
         controls.addWidget(self.play_button)
-        controls.addWidget(QLabel("Tonalidad"))
+        self.position_label = QLabel("00:00 / 00:00")
+        self.position_label.setObjectName("transportTime")
+        controls.addWidget(self.position_label)
+        controls.addStretch(1)
+        pitch_label = QLabel("PITCH")
+        pitch_label.setObjectName("controlEyebrow")
+        controls.addWidget(pitch_label)
         self.pitch = QSpinBox()
         self.pitch.setRange(-12, 12)
-        self.pitch.setSuffix(" semitonos")
+        self.pitch.setSuffix(" st")
+        self.pitch.setToolTip("Cambiar tonalidad sin alterar el tempo")
+        self.pitch.setFixedWidth(82)
         controls.addWidget(self.pitch)
         self.apply_pitch_button = QPushButton("Aplicar pitch")
+        self.apply_pitch_button.setObjectName("secondaryButton")
         self.apply_pitch_button.clicked.connect(lambda: self.pitch_requested.emit(self.pitch.value()))
         controls.addWidget(self.apply_pitch_button)
         self.export_button = QPushButton("Exportar stems")
+        self.export_button.setObjectName("primaryButton")
         self.export_button.clicked.connect(self._choose_export_directory)
         controls.addWidget(self.export_button)
-        controls.addStretch(1)
-        root.addLayout(controls)
-        self.position_label = QLabel("00:00 / 00:00")
-        root.addWidget(self.position_label)
+        root.addWidget(transport)
 
     def set_result(self, result: SeparationResult) -> None:
         self.result = result
@@ -179,34 +228,60 @@ class AudioWorkbench(QWidget):
             self._mixer = None
             QMessageBox.warning(self, "No se pudo cargar el mezclador", str(error))
             return
+        self.stem_count.setText(f"{len(stems)} PISTAS")
         for index, stem in enumerate(stems):
             row = QFrame()
-            row.setStyleSheet("QFrame { background: #0b1219; border-radius: 5px; }")
+            row.setObjectName("trackRow")
             layout = QHBoxLayout(row)
-            layout.setContentsMargins(8, 5, 8, 5)
+            layout.setContentsMargins(12, 6, 12, 6)
+            layout.setSpacing(10)
+            color = _TRACK_COLORS[stem.kind]
+            marker = QFrame()
+            marker.setObjectName("trackMarker")
+            marker.setFixedSize(4, 32)
+            marker.setStyleSheet(f"background: {color}; border-radius: 2px;")
+            layout.addWidget(marker)
+            label_column = QVBoxLayout()
+            label_column.setSpacing(3)
             name = QLabel(_NAMES[stem.kind])
+            name.setObjectName("trackTitle")
             name.setMinimumWidth(120)
-            layout.addWidget(name)
-            waveform = Waveform(stem.path)
+            ordinal = QLabel(f"PISTA {index + 1:02d}")
+            ordinal.setObjectName("trackOrdinal")
+            label_column.addWidget(name)
+            label_column.addWidget(ordinal)
+            layout.addLayout(label_column)
+            waveform = Waveform(stem.path, _TRACK_COLORS[stem.kind])
+            waveform.setObjectName("waveform")
             waveform.seek_requested.connect(self._seek)
             layout.addWidget(waveform, 1)
             gain = QSlider(Qt.Orientation.Horizontal)
             gain.setRange(0, 150)
             gain.setValue(100)
-            gain.setMaximumWidth(120)
+            gain.setMaximumWidth(112)
+            gain.setToolTip("Volumen de esta pista")
             gain.valueChanged.connect(lambda value, i=index: self._mixer and self._mixer.set_controls(i, gain=value / 100))
             layout.addWidget(gain)
+            gain_label = QLabel("100 %")
+            gain_label.setObjectName("gainValue")
+            gain_label.setMinimumWidth(42)
+            gain.valueChanged.connect(lambda value, label=gain_label: label.setText(f"{value} %"))
+            layout.addWidget(gain_label)
             mute = QPushButton("M")
+            mute.setObjectName("trackToggle")
+            mute.setToolTip(f"Silenciar {_NAMES[stem.kind]}")
             mute.setCheckable(True)
             mute.setMaximumWidth(34)
             mute.toggled.connect(lambda value, i=index: self._mixer and self._mixer.set_controls(i, muted=value))
             solo = QPushButton("S")
+            solo.setObjectName("trackToggle")
+            solo.setToolTip(f"Solo {_NAMES[stem.kind]}")
             solo.setCheckable(True)
             solo.setMaximumWidth(34)
             solo.toggled.connect(lambda value, i=index: self._mixer and self._mixer.set_controls(i, solo=value))
             layout.addWidget(mute)
             layout.addWidget(solo)
-            self._rows.append((waveform, gain, mute, solo))
+            self._rows.append((waveform, gain, mute, solo, gain_label))
             self.track_container.addWidget(row)
 
     def _toggle_playback(self) -> None:
@@ -217,13 +292,15 @@ class AudioWorkbench(QWidget):
             if stream is not None and stream.active:
                 self._mixer.pause()
                 self._timer.stop()
-                self.play_button.setText("▶ Reproducir")
+                self.play_button.setText("▶")
+                self.play_button.setAccessibleName("Reproducir")
             else:
                 if self._mixer.position >= self._mixer.frame_count:
                     self._mixer.seek(0)
                 self._mixer.start()
                 self._timer.start()
-                self.play_button.setText("❚❚ Pausar")
+                self.play_button.setText("Ⅱ")
+                self.play_button.setAccessibleName("Pausar")
         except (RuntimeError, OSError) as error:
             QMessageBox.warning(self, "No se pudo reproducir", str(error))
 
@@ -238,14 +315,15 @@ class AudioWorkbench(QWidget):
         position = self._mixer.position
         duration = max(1, self._mixer.frame_count)
         ratio = position / duration
-        for waveform, _, _, _ in self._rows:
+        for waveform, _, _, _, _ in self._rows:
             waveform.set_playhead(ratio)
         current_seconds = position / self._mixer.sample_rate
         total_seconds = duration / self._mixer.sample_rate
         self.position_label.setText(f"{self._time(current_seconds)} / {self._time(total_seconds)}")
         if position >= duration:
             self._timer.stop()
-            self.play_button.setText("▶ Reproducir")
+            self.play_button.setText("▶")
+            self.play_button.setAccessibleName("Reproducir")
 
     @staticmethod
     def _time(seconds: float) -> str:
