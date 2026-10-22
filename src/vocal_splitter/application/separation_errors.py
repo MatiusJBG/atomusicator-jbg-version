@@ -27,6 +27,11 @@ class SeparationFfmpegUnavailableError(SeparationError):
         "su carpeta a PATH; la aplicación no incluye ese binario."
     )
 
+    def __init__(self, user_message: str | None = None) -> None:
+        if user_message is not None:
+            self.user_message = user_message
+        super().__init__(self.user_message)
+
 
 class SeparationModelDownloadError(SeparationError):
     code = "model_download_failed"
