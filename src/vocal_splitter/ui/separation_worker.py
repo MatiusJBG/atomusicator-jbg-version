@@ -39,7 +39,7 @@ class _Cancellation:
 
 
 class SeparationWorker(QObject):
-    progress = Signal(str, int)
+    progress = Signal(str, str, int)
     succeeded = Signal(object)
     failed = Signal(str, object)
     cancelled = Signal()
@@ -60,8 +60,9 @@ class SeparationWorker(QObject):
     def run(self) -> None:
         def report(stage: SeparationStage, percent: int, message: str) -> None:
             if self._job.state.value == "running":
+                percent = max(self._job.progress_percent, percent)
                 self._job = self._job.advance(stage, percent, message)
-            self.progress.emit(message, percent)
+            self.progress.emit(stage.value, message, percent)
 
         try:
             result = self._service.execute(

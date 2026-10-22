@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
 from vocal_splitter.application.import_audio import ImportAudioService
 from vocal_splitter.application.separate_vocals import SeparateVocals
 from vocal_splitter.domain.audio_session import AudioSession
+from vocal_splitter.domain.separation_job import SeparationStage
 from vocal_splitter.domain.separation_result import SeparationResult
 from vocal_splitter.domain.stem import StemKind
 from vocal_splitter.infrastructure.separation.audio_separator_engine import AudioSeparatorEngine
@@ -125,6 +126,12 @@ class MainWindow(QMainWindow):
             " border-radius: 10px; }"
             "QFrame#dropArea[dragActive='true'] { border: 2px solid #56d6d1;"
             " background: #142631; }"
+            "QFrame#separationPanel { background: #101923; border: 1px solid #29404b;"
+            " border-radius: 10px; }"
+            "QLabel#separationHeading { color: #edf3f5; font-size: 24px; font-weight: 700; }"
+            "QLabel#separationPhase { color: #56d6d1; font-size: 18px; font-weight: 650; }"
+            "QLabel#separationSteps { color: #c3d4da; font-size: 14px; }"
+            "QLabel#separationDetail { color: #a9bbc4; font-size: 14px; }"
             "QLabel#waveMark { color: #56d6d1; font-size: 52px; font-weight: 700; }"
             "QLabel#dropPrompt { color: #edf3f5; font-size: 19px; font-weight: 600; }"
             "QLabel#formatList { color: #93aab5; font-size: 12px; }"
@@ -175,6 +182,36 @@ class MainWindow(QMainWindow):
 
         self.drop_area = DropArea()
         self.drop_area.file_dropped.connect(self._start_import)
+        self.separation_panel = QFrame()
+        self.separation_panel.setObjectName("separationPanel")
+        self.separation_panel.setMinimumHeight(300)
+        process_layout = QVBoxLayout(self.separation_panel)
+        process_layout.setContentsMargins(28, 28, 28, 28)
+        process_layout.setSpacing(12)
+        self.separation_heading = QLabel("Separando la mezcla")
+        self.separation_heading.setObjectName("separationHeading")
+        self.separation_phase = QLabel("Preparando modelos de audio…")
+        self.separation_phase.setObjectName("separationPhase")
+        self.separation_steps = QLabel(
+            "1  Voz + acompañamiento     →     2  Voz principal + coros     →     "
+            "3  Validación de pistas"
+        )
+        self.separation_steps.setObjectName("separationSteps")
+        self.separation_detail = QLabel("Preparando el procesamiento local.")
+        self.separation_detail.setObjectName("separationDetail")
+        self.separation_detail.setWordWrap(True)
+        self.separation_progress = QProgressBar()
+        self.separation_progress.setRange(0, 100)
+        self.separation_progress.setValue(0)
+        self.separation_progress.setTextVisible(True)
+        process_layout.addStretch(1)
+        process_layout.addWidget(self.separation_heading)
+        process_layout.addWidget(self.separation_phase)
+        process_layout.addWidget(self.separation_steps)
+        process_layout.addWidget(self.separation_progress)
+        process_layout.addWidget(self.separation_detail)
+        process_layout.addStretch(1)
+        self.separation_panel.hide()
         self.workbench_host = QWidget()
         self.workbench_layout = QVBoxLayout(self.workbench_host)
         self.workbench_layout.setContentsMargins(0, 0, 0, 0)
@@ -196,6 +233,7 @@ class MainWindow(QMainWindow):
         content.addWidget(subtitle)
         content.addSpacing(18)
         content.addWidget(self.drop_area, 1)
+        content.addWidget(self.separation_panel, 1)
         content.addWidget(self.workbench_host, 1)
         content.addWidget(self.progress)
         content.addWidget(self.result_label)
@@ -326,20 +364,43 @@ class MainWindow(QMainWindow):
         self.import_button.setEnabled(False)
         self.separate_button.setEnabled(False)
         self.cancel_button.show()
-        self.progress.setRange(0, 0)
-        self.progress.show()
+        self.drop_area.hide()
+        self.workbench_host.hide()
+        self.separation_panel.show()
+        self.separation_progress.setRange(0, 0)
+        self.separation_progress.show()
+        self.separation_phase.setText("Preparando los modelos de separación…")
+        self.separation_detail.setText(
+            "El procesamiento se ejecuta localmente. La primera ejecución puede tardar "
+            "mientras se preparan los modelos."
+        )
         self.result_label.setText(
             "Preparando la separación local. La primera ejecución descargará los dos modelos UVR configurados."
         )
         self.statusBar().showMessage("Preparando separación…")
         thread.start()
 
-    def _separation_progress(self, message: str, percent: int) -> None:
+    def _separation_progress(self, stage: str, message: str, percent: int) -> None:
+        stage_labels = {
+            SeparationStage.PREPARING.value: "Preparando modelos de separación",
+            SeparationStage.VOICE_AND_INSTRUMENTAL.value:
+                "Etapa 1/2 · Separando voz y acompañamiento",
+            SeparationStage.LEAD_AND_BACKING.value:
+                "Etapa 2/2 · Separando voz principal y coros",
+            SeparationStage.FINALIZING.value: "Validando y guardando las tres pistas",
+        }
+        self.separation_phase.setText(
+            stage_labels.get(stage, "Procesando audio localmente")
+        )
+        self.separation_detail.setText(message)
         if message.startswith("Descargando modelo"):
-            self.progress.setRange(0, 100)
-            self.progress.setValue(percent)
+            self.separation_progress.setRange(0, 100)
+            self.separation_progress.setValue(percent)
+        elif message == "Separando audio localmente…":
+            self.separation_progress.setRange(0, 0)
         else:
-            self.progress.setRange(0, 0)
+            self.separation_progress.setRange(0, 100)
+            self.separation_progress.setValue(percent)
         self.result_label.setText(message)
         self.statusBar().showMessage(message)
 
@@ -358,6 +419,7 @@ class MainWindow(QMainWindow):
             "Separación lista. La voz principal y los coros son estimaciones; "
             "escucha las pistas antes de usarlas.\n" + paths
         )
+        self.separation_panel.hide()
         self.drop_area.hide()
         if self.workbench is not None:
             self.workbench.dispose()
@@ -414,6 +476,8 @@ class MainWindow(QMainWindow):
             paths = "\n".join(str(stem.path) for stem in partial_result.stems)
             message = f"{message}\nResultados de primera etapa:\n{paths}"
         self.result_label.setText(message)
+        self.separation_panel.hide()
+        self.drop_area.show()
         self.statusBar().showMessage("No se completó la separación")
         QMessageBox.warning(self, "No se pudo separar", message)
 
@@ -421,6 +485,8 @@ class MainWindow(QMainWindow):
         self.result_label.setText(
             "Separación cancelada. El audio de origen no se modificó."
         )
+        self.separation_panel.hide()
+        self.drop_area.show()
         self.statusBar().showMessage("Separación cancelada")
 
     def _cancel_separation(self) -> None:
@@ -432,7 +498,7 @@ class MainWindow(QMainWindow):
             )
 
     def _separation_finished(self) -> None:
-        self.progress.hide()
+        self.separation_progress.setRange(0, 100)
         self.import_button.setEnabled(True)
         self.separate_button.setEnabled(self._current_session is not None)
         self.cancel_button.hide()
