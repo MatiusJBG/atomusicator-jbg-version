@@ -32,7 +32,6 @@ from vocal_splitter.application.separate_vocals import SeparateVocals
 from vocal_splitter.domain.audio_session import AudioSession
 from vocal_splitter.domain.separation_job import SeparationStage
 from vocal_splitter.domain.separation_result import SeparationResult
-from vocal_splitter.domain.stem import StemKind
 from vocal_splitter.infrastructure.separation.audio_separator_engine import AudioSeparatorEngine
 from vocal_splitter.infrastructure.separation.model_profile import load_reviewed_profiles
 from vocal_splitter.infrastructure.projects.settings_store import SettingsStore
@@ -40,6 +39,9 @@ from vocal_splitter.ui.import_worker import ImportWorker
 from vocal_splitter.ui.audio_workbench import AudioWorkbench
 from vocal_splitter.ui.pitch_worker import PitchWorker
 from vocal_splitter.ui.settings_dialog import SettingsDialog
+from vocal_splitter.ui.theme import APPLICATION_STYLE
+from vocal_splitter.ui.navigation import Sidebar
+from vocal_splitter.ui.audio_widgets import label
 from vocal_splitter.ui.separation_worker import SeparationWorker
 
 
@@ -83,7 +85,7 @@ class DropArea(QFrame):
         content = QVBoxLayout(self)
         content.setAlignment(Qt.AlignmentFlag.AlignCenter)
         content.setSpacing(8)
-        content.addWidget(wave)
+        content.addWidget(wave, 0, Qt.AlignmentFlag.AlignHCenter)
         content.addWidget(prompt)
         content.addWidget(formats)
 
@@ -120,7 +122,7 @@ class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle("Separador Vocal")
-        self.resize(1280, 800)
+        self.resize(1440, 900)
         self.setMinimumSize(940, 650)
 
         self._settings_store = SettingsStore()
@@ -138,67 +140,7 @@ class MainWindow(QMainWindow):
 
         self._build_menu()
         self._build_content()
-        self.setStyleSheet(
-            "QMainWindow, QWidget#central { background: #151d20; color: #f0eee6; }"
-            "QLabel#pageTitle { font-size: 27px; font-weight: 700; color: #f0eee6; }"
-            "QLabel#pageSubtitle { font-size: 14px; color: #aebcb6; }"
-            "QPushButton { background: #55cfc0; color: #122120; border: 0;"
-            " border-radius: 8px; padding: 10px 17px; font-weight: 650; }"
-            "QPushButton:hover { background: #79dfd1; }"
-            "QPushButton:checked { background: #e5b35b; color: #19201e; }"
-            "QPushButton:disabled { background: #3a6662; color: #ccd8d2; }"
-            "QFrame#dropArea { background: #202b2f; border: 1px dashed #526761;"
-            " border-radius: 12px; }"
-            "QFrame#dropArea[dragActive='true'] { border: 2px solid #55cfc0;"
-            " background: #273633; }"
-            "QFrame#separationPanel { background: #202b2f; border: 1px solid #354541;"
-            " border-radius: 12px; }"
-            "QLabel#separationHeading { color: #edf3f5; font-size: 24px; font-weight: 700; }"
-            "QLabel#separationPhase { color: #55cfc0; font-size: 18px; font-weight: 650; }"
-            "QLabel#separationSteps { color: #d0d8d0; font-size: 14px; }"
-            "QLabel#separationDetail { color: #aebcb6; font-size: 14px; }"
-            "QLabel#waveMark { color: #55cfc0; font-size: 52px; font-weight: 700; }"
-            "QLabel#dropPrompt { color: #f0eee6; font-size: 19px; font-weight: 600; }"
-            "QLabel#formatList { color: #aebcb6; font-size: 12px; }"
-            "QLabel#result { color: #dce4db; font-size: 13px; }"
-            "QProgressBar { border: 0; border-radius: 3px; background: #2b383b; height: 6px; }"
-            "QProgressBar::chunk { border-radius: 3px; background: #55cfc0; }"
-            "QMenuBar { background: #151d20; color: #dce4db; padding: 3px; }"
-            "QMenuBar::item:selected, QMenu::item:selected { background: #2b383b; }"
-            "QLabel#workbenchTitle { color: #f0eee6; font-size: 20px; font-weight: 700; }"
-            "QLabel#workbenchHint { color: #aebcb6; font-size: 12px; }"
-            "QLabel#stemCount { color: #55cfc0; background: #243a36; border-radius: 9px;"
-            " padding: 7px 10px; font-size: 10px; font-weight: 700; }"
-            "QFrame#trackRow { background: #202b2f; border: 1px solid #33413d; border-radius: 9px; }"
-            "QLabel#trackTitle { color: #f0eee6; font-size: 13px; font-weight: 650; }"
-            "QLabel#trackOrdinal, QLabel#controlEyebrow { color: #83958e; font-size: 9px;"
-            " font-weight: 700; letter-spacing: 1px; }"
-            "QLabel#gainValue { color: #c1ccc3; font-size: 11px; }"
-            "QFrame#transportPanel { background: #202b2f; border: 1px solid #354541; border-radius: 11px; }"
-            "QLabel#transportTime { color: #dce4db; font-family: Consolas; font-size: 13px;"
-            " font-weight: 650; min-width: 96px; }"
-            "QPushButton#playButton { background: #55cfc0; color: #122120; padding: 0;"
-            " border-radius: 21px; font-size: 16px; font-weight: 700; }"
-            "QPushButton#playButton:hover { background: #79dfd1; }"
-            "QPushButton#secondaryButton { background: #2b383b; color: #e3e7de;"
-            " border: 1px solid #465650; padding: 8px 13px; }"
-            "QPushButton#secondaryButton:hover { background: #364541; }"
-            "QPushButton#primaryButton { padding: 8px 14px; }"
-            "QPushButton#trackToggle { background: #2b383b; color: #b8c5bd;"
-            " border: 1px solid #465650; border-radius: 6px; padding: 5px; font-weight: 700; }"
-            "QPushButton#trackToggle:checked { background: #e5b35b; color: #17201d; border-color: #e5b35b; }"
-            "QSlider::groove:horizontal { background: #3a4843; height: 4px; border-radius: 2px; }"
-            "QSlider::sub-page:horizontal { background: #55cfc0; border-radius: 2px; }"
-            "QSlider::handle:horizontal { background: #f0eee6; width: 12px; margin: -5px 0; border-radius: 6px; }"
-            "QSpinBox { background: #202b2f; color: #f0eee6; border: 1px solid #465650;"
-            " border-radius: 6px; padding: 6px; }"
-            "QScrollArea#trackScroll, QWidget#trackContent { background: transparent; }"
-            "QScrollBar:vertical { width: 8px; background: #202b2f; border: 0; margin: 2px; }"
-            "QScrollBar::handle:vertical { min-height: 24px; background: #52645c; border-radius: 4px; }"
-            "QScrollBar::handle:vertical:hover { background: #71857a; }"
-            "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }"
-            "QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: transparent; }"
-        )
+        self.setStyleSheet(APPLICATION_STYLE)
 
     def _build_menu(self) -> None:
         settings_action = QAction("Carpeta de proyectos…", self)
@@ -212,12 +154,15 @@ class MainWindow(QMainWindow):
         help_menu.addAction(credits_action)
 
     def _build_content(self) -> None:
-        title = QLabel("Separador Vocal")
-        title.setObjectName("pageTitle")
-        subtitle = QLabel("Separa voz, coros, batería, bajo e instrumental; mezcla cada pista por separado.")
+        self.project_title = QLabel("Tu próximo proyecto")
+        self.project_title.setObjectName("pageTitle")
+        self.project_title.setTextFormat(Qt.TextFormat.PlainText)
+        title = self.project_title
+        subtitle = QLabel("Cinco pistas. Una mezcla a tu medida.")
         subtitle.setObjectName("pageSubtitle")
 
-        self.import_button = QPushButton("Importar audio")
+        self.import_button = QPushButton("+ Nuevo proyecto")
+        self.import_button.setObjectName("primaryButton")
         self.import_button.setMinimumHeight(44)
         self.import_button.clicked.connect(self._choose_file)
 
@@ -226,6 +171,9 @@ class MainWindow(QMainWindow):
         self.separate_button.setEnabled(False)
         self.separate_button.clicked.connect(self._start_separation)
 
+        self.export_audio_button = QPushButton("↓ Exportar audio")
+        self.export_audio_button.setEnabled(False)
+        self.export_audio_button.clicked.connect(self._export_current)
         self.cancel_button = QPushButton("Cancelar")
         self.cancel_button.setMinimumHeight(44)
         self.cancel_button.hide()
@@ -236,6 +184,7 @@ class MainWindow(QMainWindow):
         header.addStretch(1)
         header.addWidget(self.separate_button)
         header.addWidget(self.cancel_button)
+        header.addWidget(self.export_audio_button)
         header.addWidget(self.import_button)
 
         self.drop_area = DropArea()
@@ -255,6 +204,7 @@ class MainWindow(QMainWindow):
             "3  Batería     →     4  Bajo + instrumental restante"
         )
         self.separation_steps.setObjectName("separationSteps")
+        self.separation_steps.setWordWrap(True)
         self.separation_detail = QLabel("Preparando el procesamiento local.")
         self.separation_detail.setObjectName("separationDetail")
         self.separation_detail.setWordWrap(True)
@@ -285,11 +235,14 @@ class MainWindow(QMainWindow):
         self.progress.hide()
 
         content = QVBoxLayout()
-        content.setContentsMargins(42, 34, 42, 34)
-        content.setSpacing(14)
+        content.setContentsMargins(24, 24, 24, 12)
+        content.setSpacing(8)
+        self.breadcrumb = label("Separador Vocal  /  Proyectos", "breadcrumb")
+        content.addWidget(self.breadcrumb)
         content.addLayout(header)
+        self.metadata_label = subtitle
         content.addWidget(subtitle)
-        content.addSpacing(18)
+        content.addSpacing(6)
         content.addWidget(self.drop_area, 1)
         content.addWidget(self.separation_panel, 1)
         content.addWidget(self.workbench_host, 1)
@@ -298,11 +251,55 @@ class MainWindow(QMainWindow):
 
         central = QWidget()
         central.setObjectName("central")
-        central.setLayout(content)
+        shell = QHBoxLayout(central)
+        shell.setContentsMargins(0, 0, 0, 0)
+        shell.setSpacing(0)
+        self.sidebar = Sidebar()
+        self.sidebar.projects_requested.connect(self._show_projects)
+        self.sidebar.mixer_requested.connect(self._show_mixer)
+        self.sidebar.export_requested.connect(self._export_current)
+        self.sidebar.settings_requested.connect(self._open_settings)
+        shell.addWidget(self.sidebar)
+        shell.addLayout(content, 1)
         self.setCentralWidget(central)
         self.statusBar().showMessage("Listo para importar audio")
 
+    def _busy(self) -> bool:
+        return (self._thread is not None or self._separation_thread is not None
+                or self._pitch_thread is not None
+                or (self.workbench is not None and self.workbench.export_running))
+
+    def _show_projects(self) -> None:
+        if self._busy():
+            self.statusBar().showMessage("Espera a que termine la operación actual.")
+            return
+        if self.workbench:
+            self.workbench.stop()
+        self.sidebar.set_page("projects")
+        self.breadcrumb.setText("Separador Vocal  /  Proyectos")
+        self.workbench_host.hide()
+        self.drop_area.show()
+
+    def _show_mixer(self) -> None:
+        if self._busy():
+            return
+        self.sidebar.set_page("mixer")
+        self.breadcrumb.setText("Separador Vocal  /  Mezclador DAW")
+        if self.workbench:
+            self.drop_area.hide()
+            self.workbench_host.show()
+        else:
+            self.sidebar.set_page("projects")
+            self.statusBar().showMessage("Importa audio y separa los stems para abrir el mezclador.")
+
+    def _export_current(self) -> None:
+        if self.workbench is not None and not self._busy():
+            self.workbench._choose_export_directory()
+
     def _choose_file(self) -> None:
+        if self._busy():
+            self.statusBar().showMessage("Espera a que termine la operación actual.")
+            return
         source_path, _ = QFileDialog.getOpenFileName(
             self,
             "Importar audio",
@@ -313,7 +310,8 @@ class MainWindow(QMainWindow):
             self._start_import(source_path)
 
     def _start_import(self, source_path: str) -> None:
-        if self._thread is not None:
+        if self._busy():
+            self.statusBar().showMessage("Espera a que termine la operación actual.")
             return
 
         self.import_button.setEnabled(False)
@@ -341,6 +339,19 @@ class MainWindow(QMainWindow):
 
     def _import_succeeded(self, session: AudioSession) -> None:
         self._current_session = session
+        self._separation_result = None
+        if self.workbench is not None:
+            self.workbench.dispose()
+            self.workbench.deleteLater()
+            self.workbench = None
+        self.workbench_host.hide()
+        self.drop_area.show()
+        self.sidebar.set_page("projects")
+        self.sidebar.export.setEnabled(False)
+        self.export_audio_button.setEnabled(False)
+        self.project_title.setText(Path(session.asset.file_name).stem)
+        self.project_title.setToolTip(session.asset.file_name)
+        self.metadata_label.setText(f"{session.asset.sample_rate_hz / 1000:g} kHz  /  {session.asset.channels} canales  /  {self._format_duration(session.asset.duration_seconds)}")
         self.separate_button.setEnabled(True)
         asset = session.asset
         duration = self._format_duration(asset.duration_seconds)
@@ -365,7 +376,7 @@ class MainWindow(QMainWindow):
         self._thread = None
 
     def _start_separation(self) -> None:
-        if self._separation_thread is not None or self._current_session is None:
+        if self._busy() or self._current_session is None:
             return
 
         app_data = QStandardPaths.writableLocation(
@@ -419,6 +430,8 @@ class MainWindow(QMainWindow):
 
         self._separation_thread = thread
         self._separation_worker = worker
+        if self.workbench:
+            self.workbench.stop()
         self.import_button.setEnabled(False)
         self.separate_button.setEnabled(False)
         self.cancel_button.show()
@@ -468,21 +481,7 @@ class MainWindow(QMainWindow):
 
     def _separation_succeeded(self, result: SeparationResult) -> None:
         self._separation_result = result
-        labels = {
-            StemKind.LEAD_VOCAL: "Voz principal",
-            StemKind.BACKING_VOCALS: "Coros / residuo vocal",
-            StemKind.DRUMS: "Batería",
-            StemKind.BASS: "Bajo",
-            StemKind.INSTRUMENTAL: "Instrumental",
-        }
-        paths = "\n".join(
-            f"{labels[stem.kind]}: {stem.path}"
-            for stem in result.stems
-        )
-        self.result_label.setText(
-            "Separación lista. Voz principal y coros son estimaciones del modelo; "
-            "escucha las pistas antes de usarlas.\n" + paths
-        )
+        self.result_label.setText("Separación local lista. Los originales se conservan. Voz principal y coros son estimaciones.")
         self.separation_panel.hide()
         self.drop_area.hide()
         if self.workbench is not None:
@@ -492,21 +491,27 @@ class MainWindow(QMainWindow):
         self.workbench.pitch_requested.connect(self._start_pitch_render)
         self.workbench_layout.addWidget(self.workbench)
         self.workbench_host.show()
+        self.sidebar.set_page("mixer")
+        self.breadcrumb.setText("Separador Vocal  /  Mezclador DAW")
+        self.sidebar.export.setEnabled(True)
+        self.export_audio_button.setEnabled(True)
         self.statusBar().showMessage("Separación lista")
 
     def _start_pitch_render(self, semitones: int) -> None:
-        if self._pitch_thread is not None or self._separation_result is None or self._current_session is None:
+        if self._busy() or self._separation_result is None or self._current_session is None:
             return
         if self.workbench is not None:
-            self.workbench.apply_pitch_button.setEnabled(False)
-            self.workbench.play_button.setEnabled(False)
+            self.workbench.set_pitch_busy(True)
         thread = QThread(self)
         worker = PitchWorker(
             self._separation_result,
             self._current_session.directory / "outputs" / "pitch-renders",
             semitones,
+            preserve_formants=self.workbench.formants.isChecked() if self.workbench else True,
         )
         worker.moveToThread(thread)
+        if self.workbench is not None:
+            worker.progress.connect(self.workbench.set_pitch_progress)
         worker.finished.connect(self._pitch_rendered)
         worker.failed.connect(self._pitch_failed)
         worker.done.connect(thread.quit)
@@ -532,8 +537,7 @@ class MainWindow(QMainWindow):
         self._pitch_thread = None
         self._pitch_worker = None
         if self.workbench is not None:
-            self.workbench.apply_pitch_button.setEnabled(True)
-            self.workbench.play_button.setEnabled(True)
+            self.workbench.set_pitch_busy(False)
 
     def _separation_failed(self, message: str, partial_result: object) -> None:
         if isinstance(partial_result, SeparationResult):
@@ -571,6 +575,10 @@ class MainWindow(QMainWindow):
         self._separation_thread = None
 
     def closeEvent(self, event: QCloseEvent) -> None:
+        if self._thread is not None:
+            self.statusBar().showMessage("Espera a que termine la importación antes de cerrar.")
+            event.ignore()
+            return
         if self._separation_thread is not None:
             self._cancel_separation()
             self.statusBar().showMessage(
@@ -590,6 +598,8 @@ class MainWindow(QMainWindow):
             )
             event.ignore()
             return
+        if self.workbench is not None:
+            self.workbench.dispose()
         super().closeEvent(event)
 
     def _open_settings(self) -> None:

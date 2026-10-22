@@ -13,8 +13,10 @@ La interfaz se inspira en flujos comunes de estaciones de audio. Separador Vocal
 - Muestra formas de onda sincronizadas y una línea de reproducción común.
 - Reproduce y pausa las pistas, permite buscar en la canción y ajustar el volumen de cada stem.
 - Los botones **M** (Mute) y **S** (Solo) cambian la mezcla durante la reproducción.
+- Ajusta el panorama de cada pista y el volumen master; los medidores muestran niveles de audio reales.
+- Amplía la línea de tiempo de 100 % a 400 % con desplazamiento común de regla y pistas.
 - Cambia el pitch entre -12 y +12 semitonos con Rubber Band de FFmpeg. El tempo no se modifica y los WAV originales se conservan.
-- Exporta copias WAV de los stems actuales a una carpeta elegida; la copia se realiza en segundo plano.
+- Exporta los stems elegidos a WAV, FLAC o MP3, con frecuencia de 44.1/48 kHz, mono/estéreo y normalización opcional. WAV y FLAC permiten 16/24 bits; MP3 usa 320 kbps. La conversión se realiza en segundo plano con FFmpeg.
 - Escribe el registro de los modelos y sus parámetros en la sesión.
 
 La separación de voces es una estimación: doblajes, armonías, reverb y voces de timbre parecido pueden filtrarse entre voz principal y coros. La app no promete aislamiento perfecto.
@@ -53,6 +55,16 @@ Si PowerShell impide activar el entorno, ejecuta los comandos directamente con `
 3. Cuando termina, usa **▶ Reproducir**. Las pistas comparten la misma posición; pulsa sobre cualquier forma de onda para buscar.
 4. Ajusta cada deslizador o pulsa **M** para silenciar y **S** para escuchar solo esa pista.
 5. Elige de -12 a +12 semitonos y pulsa **Aplicar pitch**. El render se hace en segundo plano, mantiene el tempo y genera archivos derivados dentro de la sesión.
+6. Activa **Formantes** para conservar el carácter de las voces al transponer. El indicador de progreso cuenta las pistas completadas; los controles de mezcla y la posición se conservan al cargar el resultado.
+7. Pulsa **Exportar audio** o **Exportar stems**, selecciona pistas, formato y carpeta, y confirma la exportación. El volumen, mute, solo, panorama y master son controles de escucha: la exportación parte del audio de cada stem, incluyendo el pitch aplicado.
+
+## Rediseño de interfaz según Figma
+
+La rama `codex/frontend-figma-refactor` implementa las tres vistas del prototipo: mezclador DAW, diálogo de exportación y aplicación de pitch. Incluye navegación lateral, cinco carriles estéreo, transporte y paneles de pitch y master. A 1440 × 900 se muestran los cinco carriles; a 940 × 650 se pueden recorrer mediante desplazamiento.
+
+![Mezclador con audio sintético de prueba](docs/images/frontend-mixer.png)
+
+El instalador publicado de la versión 0.4.0 corresponde a la interfaz anterior. Para probar este rediseño, ejecuta el código de esta rama siguiendo las instrucciones de desarrollo. El análisis de la referencia está en [frontend-figma-design.md](docs/frontend-figma-design.md) y la validación en [frontend-figma-validation.md](docs/frontend-figma-validation.md).
 
 Las sesiones y resultados se crean por defecto bajo `%LOCALAPPDATA%\Separador Vocal\Separador Vocal\projects`, dentro de `outputs`. Esto evita que la carpeta Documentos esté redirigida a OneDrive u otra ubicación sincronizada. Si una versión anterior dejó guardada una ruta inválida o protegida, la app la reemplaza por esta carpeta local y lo registra en el log. Cambia la carpeta desde **Archivo → Carpeta de proyectos…** si necesitas otra ubicación local; la app verifica permisos y escritura antes de aceptarla.
 
