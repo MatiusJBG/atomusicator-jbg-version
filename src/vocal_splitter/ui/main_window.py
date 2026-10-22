@@ -293,7 +293,7 @@ class MainWindow(QMainWindow):
                 answer = QMessageBox.question(
                     self,
                     "Descargar modelos de separación",
-                    "Se necesitan los siguientes modelos UVR (descarga total aproximada: "
+                    "Se necesitan estos modelos UVR (descarga total aproximada: "
                     "120 MB):\n\n"
                     f"{missing}\n\n"
                     "Se guardarán en la caché local y se verificarán antes de usarlos. "
@@ -329,7 +329,7 @@ class MainWindow(QMainWindow):
         self.progress.setRange(0, 0)
         self.progress.show()
         self.result_label.setText(
-            "Preparando la separación local. La primera ejecución descargará los dos modelos aprobados."
+            "Preparando la separación local. La primera ejecución descargará los dos modelos UVR configurados."
         )
         self.statusBar().showMessage("Preparando separación…")
         thread.start()
@@ -472,7 +472,7 @@ class MainWindow(QMainWindow):
         QMessageBox.information(
             self,
             "Modelos y bibliotecas",
-            "Modelos UVR: Ultimate Vocal Remover, Anjok07 y aufr33 (MIT; atribución requerida).\n"
+            "UVR solicita respetar MIT y atribuir a UVR, Anjok07 y aufr33. Los pesos no incluyen una licencia individual.\n"
             "Motor opcional: python-audio-separator, karaokenerds (MIT).\n\n"
             "Los pesos se descargan al confirmar y se verifican antes de usarse.\n"
             "Detalles: docs/third-party-notices.md",

@@ -7,3 +7,22 @@ dist/
 build/
 *.egg-info/
 Separador Vocal/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.onnx
+*.pth
+*.ckpt
+*.pt
+*.th
+*.safetensors
+*.part
+models/
+pitch-renders/
+outputs/
+.cache/
+sessions/
+*.wav
+*.mp3
+*.flac
+*.m4a
