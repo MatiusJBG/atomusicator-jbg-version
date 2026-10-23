@@ -77,7 +77,7 @@ class Sidebar(QFrame):
             root.addWidget(button)
         root.addStretch(1)
         root.addWidget(label("●  Local", "accent"), 0, Qt.AlignmentFlag.AlignCenter)
-        root.addWidget(label("v0.5.0", "gainValue"), 0, Qt.AlignmentFlag.AlignCenter)
+        root.addWidget(label("v0.0.1", "gainValue"), 0, Qt.AlignmentFlag.AlignCenter)
         self.export.setEnabled(False)
         self.set_page("projects")
 
